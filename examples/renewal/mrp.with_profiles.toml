@@ -1,0 +1,21 @@
+[model]
+spec = "renewal-model"
+version = "0.1.0"
+
+[runtime.profile.local]
+spec = "process"
+command = "python3"
+args = ["-m", "examples.renewal.renewal"]
+
+[output.profile.default]
+spec = "filesystem"
+format = "csv"
+dir = "./output/"
+
+[output.profile.stdout]
+spec = "stdout"
+
+[runtime.profile.remote]
+spec = "docker"
+command = "python3"
+args = ["-m", "examples.renewal.renewal"]

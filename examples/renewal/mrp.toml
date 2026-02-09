@@ -1,0 +1,21 @@
+[model]
+spec = "renewal-model"
+version = "0.1.0"
+
+[runtime]
+spec = "process"
+command = "python3"
+args = ["-m", "examples.renewal.renewal"]
+
+[output]
+spec = "filesystem"
+format = "csv"
+dir = "./results/"
+
+[input]
+r0 = 2.0
+population_size = 100000
+generation_interval_pmf = [0.0, 0.0, 0.25, 0.5, 0.25]
+symptom_onset_pmf = [1.0]
+initial_infections = [1]
+sim_length = 200
