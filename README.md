@@ -29,14 +29,14 @@ Requires Python 3.11+,
 [uv](https://docs.astral.sh/uv/), and
 [poethepoet](https://poethepoet.naez.io/)
 for task running. You can install `poe` globally with `uv install poethepoet`,
-or alternatively call `uv run poe [task]`.
+or alternatively call `poe [task]`.
 
 ### Run a model
 
 The repo includes an example renewal model:
 
 ```bash
-uv run poe renewal
+poe renewal
 ```
 
 Or run directly with custom options:
