@@ -1,0 +1,8 @@
+[package]
+name = "mrp"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+serde_json = "1.0"
+csv = "1.3"

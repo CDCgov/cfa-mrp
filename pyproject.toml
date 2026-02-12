@@ -3,10 +3,7 @@ name = "mrp"
 version = "0.0.1"
 description = "Model Run Protocol — orchestration SDK for computational disease models"
 requires-python = ">=3.11"
-dependencies = [
-    "numpy>=2.4.2",
-    "rumdl>=0.1.18",
-]
+dependencies = ["numpy>=2.4.2", "rumdl>=0.1.18"]
 
 [project.scripts]
 mrp = "mrp.cli:main"
@@ -22,19 +19,19 @@ packages = ["src/mrp"]
 dev = ["poethepoet>=0.41.0", "pytest>=9.0.2", "ruff>=0.15.0", "ty>=0.0.15"]
 
 [tool.poe.tasks]
-lint_fix = "ruff check . --fix"
-lint = "ruff check ."
-format_check = "ruff format . --check"
-check = ['lint', 'format_check']
+check_lint = "ruff check ."
+check_format = "ruff format . --check"
+check_types = "ty check src"
+check_markdown = "rumdl check ."
+check_all = ['check_lint', 'check_format', "check_types", "check_markdown"]
+fix_lint = "ruff check . --fix"
+fix_format = "ruff format ."
+fix_markdown = "rumdl fmt ."
 test_unit = "pytest"
-test_integration = "whatever"
-test = ['test_unit']
-format = "ruff format ."
-
-typecheck = "ty check src"
-mdlint = "rumdl check ."
-mdfmt = "rumdl fmt ."
-renewal = "mrp run examples/renewal/mrp.toml"
+test_rust = { cmd = "cargo test", cwd = "examples/renewal-rs" }
+test_all = ['test_unit', 'test_rust']
+run_renewal = "mrp run examples/renewal/mrp.toml"
+run_renewal_rust = "mrp run examples/renewal-rs/mrp.toml"
 
 [tool.ruff]
 src = ["src", "tests"]

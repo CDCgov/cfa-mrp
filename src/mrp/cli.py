@@ -25,7 +25,9 @@ def _parse_profiles(value: str) -> dict[str, str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="mrp", description="Model Run Protocol CLI")
+    parser = argparse.ArgumentParser(
+        prog="mrp", description="Model Run Protocol CLI"
+    )
     sub = parser.add_subparsers(dest="command")
 
     run_parser = sub.add_parser("run", help="Run a model from a TOML config")

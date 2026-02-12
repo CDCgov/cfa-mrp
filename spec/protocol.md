@@ -22,11 +22,13 @@ The protocol operates across three layers:
   model interface to a concrete execution mechanism
   (subprocess, in-process, WASM).
 
-* **L2 (Translation):** Converts user-facing configuration
-  formats (CLI arguments, TOML, inline JSON) into the
-  canonical JSON transport format, and handles file staging.
+* **L2 (Translation):** Merges configuration from multiple
+  sources — config files, CLI arguments, and programmatic
+  input — into the canonical JSON transport format, and
+  handles file staging. Implemented as both a library API
+  and a CLI.
 
-![1.00 Spec overview](./spec_overview.png)
+![1.00](./spec_overview.png)
 
 MRP separates the concerns of *what a model computes*
 from *how it is invoked*, *where its inputs come from*,
@@ -181,7 +183,7 @@ r0 = 2.5
 gamma = 0.1
 ```
 
-### Profiled Example
+### Profiles Example
 
 Profiles allow named variants for `runtime` and `output`:
 
@@ -228,23 +230,12 @@ consumed by the SDK and stripped before transport.
 | `[output]`            | `output`            | Output sink config (flat keys).                                                                     |
 | `[output.profile.*]`  | `output.profile.*`  | Named output variants. Selected via `--profile output=<name>`.                                      |
 
-### TOML-to-JSON Translation
+### Translation
 
-Because the TOML structure mirrors JSON, translation is
-minimal. The SDK performs these steps:
-
-1. **File staging.** All URIs in `[model.files]` are
-   resolved and downloaded to local temporary paths. The
-   transport receives absolute local paths.
-
-2. **`mrp`** **section population.** The SDK computes the
-   `input_hash` (SHA-256 of the canonical JSON transport,
-   excluding the `mrp` section, truncated to 16 hex chars)
-   and sets the `version`.
-
-3. **Orchestration stripping.** The `runtime.command` and
-   `runtime.args` keys are removed from the transport
-   (they are consumed by the SDK only).
+The TOML structure mirrors the JSON transport directly,
+so translation is minimal. See
+[Section 4: L2 Translation](#l2-translation) for the
+full merge and translation pipeline.
 
 ***
 
@@ -256,6 +247,7 @@ layers through well-defined interfaces.
 
 ```text
 L2  Translation       TOML -> JSON, file staging
+    Orchestrator      dispatch between L2 and L1
 L1  Runtime Adapter   subprocess, WASM, in-process
 L0  Model             accepts JSON, produces output
 ```
@@ -289,21 +281,93 @@ Each adapter is responsible for:
 See [Section 5: Runtime Adapters](#5-runtime-adapters)
 for adapter-specific details.
 
+### Orchestrator (dispatch between L2 and L1)
+
+The orchestrator sits between translation (L2) and
+runtime execution (L1). It consumes two inputs: the
+translated JSON transport and the original config.
+
+```text
+                     config (full)
+                        │
+                  ┌─────┴─────┐
+                  │           │
+                  ▼           ▼
+L2 Translation → run_json   orchestration keys
+                 (clean)    (command, args, profiles)
+                  │           │
+                  │     ┌─────┘
+                  │     │ resolve_runtime()
+                  │     ▼
+                  │   Runtime adapter
+                  │     │
+                  └──►  runtime.run(run_json)
+                        │
+                        ▼
+                     L0 Model
+```
+
+The transport contains everything the model needs; the
+config retains orchestration-only keys (`command`, `args`,
+profile selections) that L2 deliberately stripped. The
+orchestrator uses these keys to construct the appropriate
+runtime adapter, then delegates execution by passing the
+clean transport to that adapter.
+
+The **transport path** carries model-facing data:
+parameters, file paths, output config. The **dispatch
+path** carries execution instructions: which command to
+spawn, which runtime profile to use. They converge at the
+runtime adapter, which is constructed from the dispatch
+path but invoked with the transport path.
+
+`DefaultOrchestrator` resolves a single runtime from
+config and calls `runtime.run()`. Custom orchestrators
+can implement alternative dispatch strategies (e.g.,
+remote submission, retry logic, multi-runtime fan-out)
+by overriding the `run()` method while receiving the
+same dual inputs.
+
 ### L2: Translation
 
-The translation layer converts user-facing configuration
-into the canonical JSON transport:
+The translation layer merges configuration from multiple
+sources into a single canonical JSON transport document.
+Sources are applied in descending order of precedence:
 
-* **TOML config** is parsed and translated as described
-  in [Section 3](#3-toml-config-format).
+1. **Programmatic input** — dictionary overrides passed
+   directly via the library API (highest precedence).
 
-* **CLI arguments** (`--set`, `--profile`, etc.) override
-  or augment TOML values.
+2. **CLI arguments** — `--set` overrides and `--profile`
+   selections from the command line.
 
-* **File staging** resolves remote URIs to local paths.
+3. **Config files** — TOML configuration files (lowest
+   precedence).
 
-The translation layer produces one JSON transport document
-per model invocation.
+After merging, the translation layer performs:
+
+* **File staging.** Resolves all URIs in `model.files` to
+  local filesystem paths.
+
+* **`mrp`** **section population.** Computes the `input_hash`
+  (SHA-256 of the canonical JSON transport, excluding
+  `mrp`, truncated to 16 hex chars) and sets `version`.
+
+* **Orchestration stripping.** Removes `runtime.command`
+  and `runtime.args` from the transport.
+
+#### Implementations
+
+* **Library** (`mrp.run()`) — programmatic Python API.
+  Accepts a config path and optional dictionary overrides
+  (source 1). Does not use CLI arguments (source 2).
+
+* **CLI** (`mrp run`) — command-line interface. Accepts
+  a config path with `--set` and `--profile` flags
+  (source 2). Does not accept programmatic input
+  (source 1).
+
+Both implementations produce identical JSON transport
+documents for identical merged inputs.
 
 ***
 
@@ -386,18 +450,17 @@ the `output` section of the transport document.
 
 ## 7. CLI Interface
 
-The MRP SDK provides a command-line interface for running
-models from TOML configuration files.
+The CLI is one of two implementations of the translation
+layer (L2). It reads a TOML config file, applies `--set`
+and `--profile` overrides, performs file staging, and
+dispatches a single model run through the configured
+runtime adapter.
 
 ### Basic Invocation
 
 ```bash
 mrp run mrp.toml
 ```
-
-This reads the TOML config, performs translation (file
-staging), and dispatches a single model run through the
-configured runtime adapter.
 
 ### CLI Options
 
@@ -492,4 +555,4 @@ implementation-specific functionality.
   understands them. Unknown `x-` sections are ignored.
 
 * Extensions can be used by runtimes, but they must not
-alter the behavior of the core protocol.
+  alter the behavior of the core protocol.
