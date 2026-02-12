@@ -21,7 +21,7 @@ def get_stage_dir() -> Path:
 def stage_files(files: dict[str, str]) -> dict[str, str]:
     """Stage files from URIs to local paths.
 
-    Supports: local paths, http/https URLs, s3:// (placeholder).
+    Supports: local paths, http/https URLs, az:// (placeholder).
     Returns a new dict mapping logical names to local file paths.
     """
     if not files:
@@ -50,10 +50,10 @@ def _stage_one(name: str, uri: str) -> Path:
         urllib.request.urlretrieve(uri, dest)
         return dest
 
-    # S3 — placeholder
-    if parsed.scheme == "s3":
+    # Azure Blob Storage — placeholder
+    if parsed.scheme == "az":
         raise NotImplementedError(
-            f"S3 staging not yet implemented for '{name}': {uri}. "
+            f"Azure Blob staging not yet implemented for '{name}': {uri}. "
             "Use a local path or HTTP URL for now."
         )
 

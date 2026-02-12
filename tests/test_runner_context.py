@@ -111,7 +111,7 @@ class TestOutputDir:
         assert ctx.output_dir is None
 
     def test_non_filesystem_output_ignored(self):
-        ctx = RunnerContext(_transport(output={"spec": "s3", "bucket": "my-bucket"}))
+        ctx = RunnerContext(_transport(output={"spec": "az", "container": "my-container"}))
         assert ctx.output_dir is None
 
     def test_profiled_output_default(self):

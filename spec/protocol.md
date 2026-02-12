@@ -32,7 +32,7 @@ MRP separates the concerns of *what a model computes*
 from *how it is invoked*, *where its inputs come from*,
 and *where its outputs go*. This separation allows a
 single model implementation to run identically in local
-development, CI pipelines, HPC clusters, and browser-based
+development, CI pipelines, azure batch, and browser-based
 WASM environments.
 
 ***
@@ -163,7 +163,7 @@ spec = "metapop-model"
 version = "0.1.2"
 
 [model.files]
-population = "s3://bucket/data/pop.parquet"
+population = "az://container/data/pop.parquet"
 
 [runtime]
 spec = "process"
@@ -472,7 +472,7 @@ paths before constructing the JSON transport document.
 | ------- | --------------------------------- | ------------------------------------ |
 | Local   | `./data/pop.parquet`              | Resolved to absolute path.           |
 | HTTP(S) | `https://example.com/pop.parquet` | Downloaded to a temporary directory. |
-| S3      | `s3://bucket/data/pop.parquet`    | Planned (not yet implemented).       |
+| Azure   | `az://container/data/pop.parquet` | Planned (not yet implemented).       |
 
 ***
 
