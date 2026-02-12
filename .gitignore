@@ -24,3 +24,5 @@ results/
 .ruff_cache/
 
 .vscode
+
+output/
