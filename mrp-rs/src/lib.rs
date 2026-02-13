@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 
-pub struct RunnerContext {
+pub struct Environment {
     pub input: serde_json::Map<String, Value>,
     pub seed: u64,
     pub replicate: u64,
@@ -13,7 +13,7 @@ pub struct RunnerContext {
     output: Value,
 }
 
-impl RunnerContext {
+impl Environment {
     pub fn from_json(data: Value) -> Self {
         let mut input = data
             .get("input")
@@ -150,7 +150,7 @@ mod tests {
                 "dir": "/tmp/output"
             }
         });
-        let ctx = RunnerContext::from_json(data);
+        let ctx = Environment::from_json(data);
         assert_eq!(ctx.seed, 42);
         assert_eq!(ctx.replicate, 1);
         assert_eq!(ctx.input.get("r0").unwrap().as_f64().unwrap(), 2.0);
@@ -173,7 +173,7 @@ mod tests {
                 }
             }
         });
-        let ctx = RunnerContext::from_json(data);
+        let ctx = Environment::from_json(data);
         assert_eq!(ctx.output_dir(), Some(PathBuf::from("/tmp/profiled")));
     }
 
@@ -185,14 +185,14 @@ mod tests {
                 "spec": "stdout"
             }
         });
-        let ctx = RunnerContext::from_json(data);
+        let ctx = Environment::from_json(data);
         assert_eq!(ctx.output_dir(), None);
     }
 
     #[test]
     fn test_defaults() {
         let data = json!({});
-        let ctx = RunnerContext::from_json(data);
+        let ctx = Environment::from_json(data);
         assert_eq!(ctx.seed, 0);
         assert_eq!(ctx.replicate, 0);
         assert!(ctx.input.is_empty());

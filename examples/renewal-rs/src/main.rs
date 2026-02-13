@@ -6,7 +6,7 @@ use parameters::{Parameters, Population};
 use renewal::RenewalModel;
 
 fn main() {
-    let ctx = mrp::RunnerContext::from_stdin();
+    let ctx = mrp::Environment::from_stdin();
 
     // Parse parameters from the input section
     let population_size = ctx.input.get("population_size").and_then(|v| v.as_u64());

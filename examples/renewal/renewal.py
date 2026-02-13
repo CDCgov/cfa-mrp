@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Renewal model using the MRP RunnerContext SDK."""
+"""Renewal model using the MRP Environment SDK."""
 
 from __future__ import annotations
 
@@ -77,9 +77,9 @@ class RenewalModel:
 
 
 def main():
-    from mrp import RunnerContext
+    from mrp import Environment
 
-    ctx = RunnerContext.from_stdin()
+    ctx = Environment.from_stdin()
     inp = ctx.input
 
     pop_size = inp.get("population_size")

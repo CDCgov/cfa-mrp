@@ -4,14 +4,14 @@ __version__ = "0.0.1"
 
 from mrp.api import run
 from mrp.orchestrator import DefaultOrchestrator, Orchestrator
-from mrp.runner_context import RunnerContext
+from mrp.environment import Environment
 from mrp.runtime import RunResult, Runtime, resolve_runtime
 
 __all__ = [
     "DefaultOrchestrator",
     "Orchestrator",
     "RunResult",
-    "RunnerContext",
+    "Environment",
     "Runtime",
     "resolve_runtime",
     "run",

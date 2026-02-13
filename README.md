@@ -113,14 +113,14 @@ sinks, and CLI options.
 ## Writing a model
 
 A model is any executable that reads JSON from stdin and
-writes output. The `RunnerContext` class handles all the
+writes output. The `Environment` class handles all the
 protocol boilerplate so model code can focus on
 computation:
 
 ```python
-from mrp import RunnerContext
+from mrp import Environment
 
-ctx = RunnerContext.from_stdin()
+ctx = Environment.from_stdin()
 
 # Access input params
 r0 = ctx.input["r0"]
@@ -144,9 +144,9 @@ ctx.write_csv(
 ctx.write("output.bin", some_bytes)
 ```
 
-`RunnerContext.from_stdin()` reads and parses the JSON
+`Environment.from_stdin()` reads and parses the JSON
 transport from stdin. For testing, construct directly:
-`RunnerContext({"input": {"r0": 2.5}})`.
+`Environment({"input": {"r0": 2.5}})`.
 
 Output routing is automatic — if a filesystem sink is
 configured in the transport, `write` and `write_csv`
@@ -218,7 +218,7 @@ of merging experiment files with a base config.
 
 ```text
 spec/protocol.md              — Full protocol spec
-src/mrp/runner_context.py     — RunnerContext (model SDK)
+src/mrp/environment.py        — Environment (model SDK)
 src/mrp/cli.py                — CLI entry point (mrp run)
 src/mrp/api.py                — Programmatic API (mrp.run)
 src/mrp/config.py             — TOML parsing, translation

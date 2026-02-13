@@ -1,4 +1,4 @@
-"""RunnerContext — model-side SDK for the MRP JSON transport."""
+"""Environment — model-side SDK for the MRP JSON transport."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 from numpy.random import Generator, SeedSequence, default_rng
 
 
-class RunnerContext:
+class Environment:
     def __init__(self, data: dict):
         self.input = dict(data.get("input", {}))
         self.seed = int(self.input.pop("seed", 0))
@@ -36,7 +36,7 @@ class RunnerContext:
         return cls(json.loads(raw))
 
     @classmethod
-    def from_run_json(cls, run_json: dict) -> RunnerContext:
+    def from_run_json(cls, run_json: dict) -> Environment:
         """Construct from a run JSON transport dict."""
         return cls(run_json)
 
