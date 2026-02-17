@@ -4,8 +4,7 @@ version = "0.1.0"
 
 [runtime]
 spec = "process"
-command = "python3"
-args = ["-m", "examples.renewal.renewal"]
+command = "renewal"
 
 [output]
 spec = "filesystem"

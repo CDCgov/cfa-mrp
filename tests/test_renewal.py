@@ -6,10 +6,10 @@ from pathlib import Path
 import numpy as np
 from numpy.random import SeedSequence, default_rng
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "examples"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "examples" / "renewal" / "src"))
 
+from renewal.model import Model
 from renewal.parameters import Parameters
-from renewal.renewal import RenewalModel
 
 
 class TestFinalSize:
@@ -24,8 +24,8 @@ class TestFinalSize:
             sim_length=200,
         )
         rng = default_rng(SeedSequence(8675308))
-        output = RenewalModel.simulate(parameters, rng)
-        cum_infected = int(output.infection_incidence.sum())
+        infections, _ = Model(parameters, rng).simulate()
+        cum_infected = sum(infections["count"])
         fraction_infected = cum_infected / population
         # Final size for r0=2.0 is ~0.796811
         assert abs(fraction_infected - 0.796811) < 0.1
@@ -49,9 +49,9 @@ class TestGenerationInterval:
                 sim_length=len(gi_pmf) + 1,
             )
             rng = default_rng(SeedSequence(seed))
-            output = RenewalModel.simulate(parameters, rng)
+            infections, _ = Model(parameters, rng).simulate()
             for i in range(len(cumulative_output)):
-                incidence = int(output.infection_incidence[i])
+                incidence = infections["count"][i]
                 cumulative_output[i] += incidence
                 if i > 0:
                     total += incidence

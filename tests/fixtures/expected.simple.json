@@ -11,19 +11,11 @@
     "profile": {
       "local": {
         "spec": "process",
-        "command": "python3",
-        "args": [
-          "-m",
-          "examples.renewal.renewal"
-        ]
+        "command": "renewal"
       },
       "remote": {
         "spec": "docker",
-        "command": "python3",
-        "args": [
-          "-m",
-          "examples.renewal.renewal"
-        ]
+        "command": "renewal"
       }
     }
   },

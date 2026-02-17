@@ -224,17 +224,13 @@ class TestWrite:
 
 
 class TestWriteCsv:
-    ROWS = [
-        {"step": 0, "day": 0.0, "S": 9990.0},
-        {"step": 1, "day": 1.0, "S": 9985.0},
-    ]
-    FIELDS = ["step", "day", "S"]
+    COLUMNS = {"step": [0, 1], "day": [0.0, 1.0], "S": [9990.0, 9985.0]}
 
     def test_writes_csv_to_filesystem(self, tmp_path):
         ctx = Environment(
             _transport(output={"spec": "filesystem", "dir": str(tmp_path / "out")})
         )
-        ctx.write_csv("data.csv", self.ROWS, self.FIELDS)
+        ctx.write_csv("data.csv", self.COLUMNS)
         content = (tmp_path / "out" / "data.csv").read_text()
         lines = content.strip().split("\n")
         assert lines[0] == "step,day,S"
@@ -245,15 +241,15 @@ class TestWriteCsv:
         buf = io.StringIO()
         monkeypatch.setattr("sys.stdout", buf)
         ctx = Environment(_transport())
-        ctx.write_csv("ignored.csv", self.ROWS, self.FIELDS)
+        ctx.write_csv("ignored.csv", self.COLUMNS)
         lines = buf.getvalue().strip().splitlines()
         assert lines[0] == "step,day,S"
         assert len(lines) == 3
 
-    def test_empty_rows(self, tmp_path):
+    def test_empty_columns(self, tmp_path):
         ctx = Environment(
             _transport(output={"spec": "filesystem", "dir": str(tmp_path)})
         )
-        ctx.write_csv("empty.csv", [], ["a", "b"])
+        ctx.write_csv("empty.csv", {"a": [], "b": []})
         content = (tmp_path / "empty.csv").read_text()
         assert content.strip() == "a,b"

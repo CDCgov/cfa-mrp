@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -78,7 +80,7 @@ class TestRunWithDict:
             "input": {"x": 1},
             "output": {"spec": "stdout"},
         }
-        result = run(config, overrides={"input": {"x": 99}})
+        result = run(config, {"input": {"x": 99}})
         assert result.ok
         assert b"99" in result.stdout
 
@@ -93,7 +95,7 @@ class TestRunWithDict:
             "input": {"x": 1},
             "output": {"spec": "stdout"},
         }
-        run(config, overrides={"input": {"x": 99}})
+        run(config, {"input": {"x": 99}})
         assert config["input"]["x"] == 1
 
 
@@ -124,16 +126,18 @@ class _StubRuntime(Runtime):
 
 
 class _StubOrchestrator(Orchestrator):
-    """Orchestrator that uses a stub runtime, ignoring config."""
+    """Orchestrator that builds run_json and executes via stub runtime."""
 
     def __init__(self):
-        self.last_run_json = None
         self.last_config = None
 
-    def run(self, run_json, config):
-        self.last_run_json = run_json
+    def execute(self, config, runtime):
         self.last_config = config
-        return _StubRuntime().run(run_json)
+        run_json = self.build_run(config)
+        stub = _StubRuntime()
+        result = self.run(run_json, stub)
+        self.last_run_json = stub.last_run_json
+        return result
 
 
 class TestRunWithOrchestrator:
@@ -204,18 +208,8 @@ class TestRunWithOrchestrator:
             "output": {"spec": "stdout"},
         }
         orch = _StubOrchestrator()
-        run(config, orchestrator=orch, overrides={"input": {"x": 99}})
+        run(config, {"input": {"x": 99}}, orchestrator=orch)
         assert orch.last_run_json["input"]["x"] == 99
-
-    def test_orchestrator_and_runtime_profile_conflict(self):
-        config = {
-            "model": {"spec": "test"},
-            "runtime": {"spec": "process", "command": "echo"},
-            "input": {},
-            "output": {"spec": "stdout"},
-        }
-        with pytest.raises(ValueError, match="Cannot specify both"):
-            run(config, orchestrator=_StubOrchestrator(), runtime_profile="local")
 
     def test_no_runtime_section_with_orchestrator(self):
         """Config with no [runtime] section works when orchestrator is provided."""
@@ -226,6 +220,102 @@ class TestRunWithOrchestrator:
         }
         result = run(config, orchestrator=_StubOrchestrator())
         assert result.ok
+
+
+class TestLoadConfig:
+    def test_load_single_dict(self):
+        orch = _StubOrchestrator()
+        config = orch.load_config({"input": {"x": 1}})
+        assert config["input"]["x"] == 1
+
+    def test_merge_multiple_dicts(self):
+        orch = _StubOrchestrator()
+        config = orch.load_config(
+            {"input": {"x": 1, "y": 2}},
+            {"input": {"x": 99}},
+        )
+        assert config["input"]["x"] == 99
+        assert config["input"]["y"] == 2
+
+    def test_load_toml_file(self):
+        orch = _StubOrchestrator()
+        config = orch.load_config(FIXTURES / "mrp.toml")
+        assert "model" in config
+
+    def test_file_not_found(self):
+        orch = _StubOrchestrator()
+        with pytest.raises(FileNotFoundError):
+            orch.load_config("/nonexistent/path.toml")
+
+    def test_invalid_type(self):
+        orch = _StubOrchestrator()
+        with pytest.raises(TypeError):
+            orch.load_config(42)  # type: ignore[arg-type]
+
+    def test_no_configs(self):
+        orch = _StubOrchestrator()
+        with pytest.raises(ValueError, match="At least one config"):
+            orch.load_config()
+
+    def test_overrides_applied(self):
+        orch = _StubOrchestrator()
+        config = orch.load_config(
+            {"input": {"x": 1}},
+            overrides=["input.x=99"],
+        )
+        assert config["input"]["x"] == 99
+
+    def test_dict_not_mutated(self):
+        orch = _StubOrchestrator()
+        original = {"input": {"x": 1}}
+        orch.load_config(original, {"input": {"x": 99}})
+        assert original["input"]["x"] == 1
+
+
+class TestResolveRuntime:
+    def test_no_runtime_returns_none(self):
+        orch = _StubOrchestrator()
+        assert orch.resolve_runtime({"input": {}}) is None
+
+    def test_empty_runtime_returns_none(self):
+        orch = _StubOrchestrator()
+        assert orch.resolve_runtime({"runtime": {}}) is None
+
+    def test_process_runtime(self):
+        from mrp.runtime.subprocess import SubprocessRuntime
+
+        orch = _StubOrchestrator()
+        runtime = orch.resolve_runtime({
+            "runtime": {
+                "spec": "process",
+                "command": "echo",
+                "args": ["hello"],
+            }
+        })
+        assert isinstance(runtime, SubprocessRuntime)
+
+
+class TestOrchestratorHooks:
+    def test_add_arguments_called(self):
+        """add_arguments is invoked on the orchestrator by the CLI."""
+
+        class _ArgOrch(Orchestrator):
+            def __init__(self):
+                self.parser_seen = None
+
+            def add_arguments(self, parser):
+                self.parser_seen = parser
+                parser.add_argument("--foo", default="bar")
+
+            def execute(self, config, runtime):
+                return RunResult(exit_code=0, stdout=b"", stderr=b"")
+
+        orch = _ArgOrch()
+        parser = argparse.ArgumentParser()
+        orch.add_arguments(parser)
+        assert orch.parser_seen is parser
+        ns = parser.parse_args(["--foo", "baz"])
+        assert ns.foo == "baz"
 
 
 class TestTopLevelExports:

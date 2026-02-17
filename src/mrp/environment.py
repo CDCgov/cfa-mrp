@@ -2,16 +2,84 @@
 
 from __future__ import annotations
 
+import copy
 import csv
 import json
 import sys
+import tomllib
 from pathlib import Path
 
 from numpy.random import Generator, SeedSequence, default_rng
 
 
+def _read_file(path: Path) -> dict:
+    if path.suffix == ".toml":
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    with open(path) as f:
+        return json.load(f)
+
+
+def _read_stdin() -> dict:
+    raw = sys.stdin.read()
+    if not raw.strip():
+        return {}
+    return json.loads(raw)
+
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    result = copy.deepcopy(base)
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = copy.deepcopy(value)
+    return result
+
+
+def _parse_cli_sets() -> dict:
+    """Parse --set key=value pairs from sys.argv into a nested dict.
+
+    Dotted keys create nested structure: --set input.seed=42
+    produces {"input": {"seed": 42}}.
+    """
+    result: dict = {}
+    argv = sys.argv[1:]
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--set" and i + 1 < len(argv):
+            pair = argv[i + 1]
+            i += 2
+        elif argv[i].startswith("--set="):
+            pair = argv[i][len("--set="):]
+            i += 1
+        else:
+            i += 1
+            continue
+
+        key, _, raw_value = pair.partition("=")
+        if not key or not _:
+            continue
+
+        # Try to parse as JSON for typed values (numbers, bools, etc.)
+        try:
+            value = json.loads(raw_value)
+        except (json.JSONDecodeError, ValueError):
+            value = raw_value
+
+        # Build nested dict from dotted key
+        parts = key.split(".")
+        target = result
+        for part in parts[:-1]:
+            target = target.setdefault(part, {})
+        target[parts[-1]] = value
+
+    return result
+
+
 class Environment:
-    def __init__(self, data: dict):
+    def __init__(self, data: dict | None = None):
+        data = data or {}
         self.input = dict(data.get("input", {}))
         self.seed = int(self.input.pop("seed", 0))
         self.replicate = int(self.input.pop("replicate", 0))
@@ -27,18 +95,60 @@ class Environment:
             self._rng = default_rng(SeedSequence(self.seed))
         return self._rng
 
-    @classmethod
-    def from_stdin(cls):
-        raw = sys.stdin.read()
-        if not raw.strip():
-            print("Error: no input on stdin", file=sys.stderr)
-            sys.exit(1)
-        return cls(json.loads(raw))
+    def load(
+        self,
+        *,
+        args: bool = False,
+        configs: list[str] | None = None,
+        json: dict | None = None,
+        resolve: str = "merge",
+    ) -> Environment:
+        """Load environment from multiple sources.
+
+        Merge order (later wins):
+        1. --set key=value CLI arguments (if args=True)
+        2. Config files in order (JSON/TOML)
+        3. json dict
+
+        Args:
+            args: Parse --set key=value pairs from sys.argv.
+            configs: List of file paths (JSON or TOML).
+            json: Dict of overrides.
+            resolve: Merge strategy. Currently only "merge" (deep merge).
+        """
+        result: dict = {}
+        if args:
+            result = _deep_merge(result, _parse_cli_sets())
+        for path in configs or []:
+            result = _deep_merge(result, _read_file(Path(path)))
+        if json is not None:
+            result = _deep_merge(result, json)
+        self.__init__(result)
+        return self
 
     @classmethod
-    def from_run_json(cls, run_json: dict) -> Environment:
-        """Construct from a run JSON transport dict."""
-        return cls(run_json)
+    def from_args(cls, *sources: dict | str) -> Environment:
+        """Create from one or more sources, merged left to right.
+
+        Each source can be:
+        - "stdin" — read JSON from stdin
+        - a file path (str) — JSON or TOML based on extension
+        - a dict — used directly
+
+        Later sources override earlier ones on conflicts.
+        """
+        if not sources:
+            sources = ("stdin",)
+        result: dict = {}
+        for source in sources:
+            if isinstance(source, dict):
+                resolved = source
+            elif source == "stdin":
+                resolved = _read_stdin()
+            else:
+                resolved = _read_file(Path(source))
+            result = _deep_merge(result, resolved)
+        return cls(result)
 
     @property
     def output_dir(self) -> Path | None:
@@ -71,7 +181,13 @@ class Environment:
             else:
                 sys.stdout.write(data)
 
-    def write_csv(self, filename: str, rows: list[dict], fieldnames: list[str]):
+    def write_csv(self, filename: str, columns: dict[str, list]):
+        fieldnames = list(columns.keys())
+        values = list(columns.values())
+        n_rows = len(values[0]) if values else 0
+        rows = [
+            {k: columns[k][i] for k in fieldnames} for i in range(n_rows)
+        ]
         if self.output_dir:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             with open(self.output_dir / filename, "w", newline="") as f:

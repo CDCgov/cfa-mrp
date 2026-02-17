@@ -40,8 +40,16 @@ def resolve_runtime(
         if not command:
             raise ValueError("runtime.command is required for process runtime")
         args = selected.get("args", [])
+        full_command = [command] + args
+
+        env = selected.get("env")
+        if env == "uv":
+            full_command = ["uv", "run"] + full_command
+        elif env is not None:
+            raise ValueError(f"Unknown runtime env: {env!r}")
+
         return SubprocessRuntime(
-            command=[command] + args,
+            command=full_command,
             cwd=selected.get("cwd"),
             timeout=selected.get("timeout"),
         )

@@ -276,6 +276,39 @@ class TestResolveRuntime:
         assert isinstance(rt, SubprocessRuntime)
         assert rt.command == ["python3", "-c", "pass"]
 
+    def test_process_runtime_env_uv(self):
+        config = {
+            "runtime": {
+                "command": "python3",
+                "args": ["-m", "mymodel"],
+                "env": "uv",
+            }
+        }
+        rt = resolve_runtime(config)
+        assert isinstance(rt, SubprocessRuntime)
+        assert rt.command == ["uv", "run", "python3", "-m", "mymodel"]
+
+    def test_process_runtime_env_uv_no_args(self):
+        config = {
+            "runtime": {
+                "command": "mymodel",
+                "env": "uv",
+            }
+        }
+        rt = resolve_runtime(config)
+        assert isinstance(rt, SubprocessRuntime)
+        assert rt.command == ["uv", "run", "mymodel"]
+
+    def test_process_runtime_unknown_env(self):
+        config = {
+            "runtime": {
+                "command": "python3",
+                "env": "conda",
+            }
+        }
+        with pytest.raises(ValueError, match="Unknown runtime env"):
+            resolve_runtime(config)
+
     def test_process_runtime_profile_default(self):
         config = {
             "runtime": {

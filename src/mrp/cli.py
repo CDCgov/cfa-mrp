@@ -6,9 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from mrp.config import apply_overrides, build_run_json, load_toml
-from mrp.orchestrator import DefaultOrchestrator
-from mrp.stager import cleanup, stage_files
+from mrp.orchestrator import DefaultOrchestrator, Orchestrator
 
 
 def _parse_profiles(value: str) -> dict[str, str]:
@@ -24,7 +22,18 @@ def _parse_profiles(value: str) -> dict[str, str]:
     return result
 
 
-def main(argv: list[str] | None = None) -> int:
+def _apply_cli_args(orch: Orchestrator, args: argparse.Namespace) -> None:
+    """Set orchestrator attrs from parsed CLI args."""
+    skip = {"command", "config", "overrides", "output_dir", "profile"}
+    for key, value in vars(args).items():
+        if key not in skip and hasattr(orch, key):
+            setattr(orch, key, value)
+
+
+def main(
+    argv: list[str] | None = None,
+    orchestrator: Orchestrator | None = None,
+) -> int:
     parser = argparse.ArgumentParser(
         prog="mrp", description="Model Run Protocol CLI"
     )
@@ -52,6 +61,9 @@ def main(argv: list[str] | None = None) -> int:
         help="Select profiles (e.g. --profile runtime=local,output=default)",
     )
 
+    orch = orchestrator or DefaultOrchestrator()
+    orch.add_arguments(run_parser)
+
     args = parser.parse_args(argv)
 
     if args.command is None:
@@ -59,40 +71,24 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.command == "run":
-        return _run(args)
+        return _run(args, orch)
 
     return 0
 
 
-def _run(args: argparse.Namespace) -> int:
-    if not args.config.exists():
-        print(f"Error: config file not found: {args.config}", file=sys.stderr)
-        return 1
-
-    config = load_toml(args.config)
-
-    if args.overrides:
-        config = apply_overrides(config, args.overrides)
-
+def _run(args: argparse.Namespace, orch: Orchestrator) -> int:
     profiles = args.profile or {}
     runtime_profile = profiles.get("runtime")
-    output_profile = profiles.get("output")
 
-    try:
-        raw_files = config.get("model", {}).get("files", {})
-        staged_files = stage_files(raw_files) if raw_files else {}
+    if isinstance(orch, DefaultOrchestrator):
+        orch.output_dir = args.output_dir
+        orch.output_profile = profiles.get("output")
 
-        run_json = build_run_json(
-            config,
-            staged_files=staged_files,
-            output_dir=args.output_dir,
-            output_profile=output_profile,
-        )
+    _apply_cli_args(orch, args)
 
-        orchestrator = DefaultOrchestrator(runtime_profile=runtime_profile)
-        result = orchestrator.run(run_json, config)
-    finally:
-        cleanup()
+    config = orch.load_config(args.config, overrides=args.overrides or None)
+    runtime = orch.resolve_runtime(config, runtime_profile=runtime_profile)
+    result = orch.execute(config, runtime)
 
     if not result.ok:
         stderr_text = result.stderr.decode(errors="replace").strip()

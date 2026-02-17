@@ -1,16 +1,14 @@
 [model]
-spec = "renewal-model"
-version = "0.1.0"
+spec = "renewal"
+version = "0.0.1"
 
 [runtime]
-spec = "process"
-command = "python3"
-args = ["-m", "examples.renewal.renewal"]
+env = "uv"
+command = "renewal"
 
 [output]
 spec = "filesystem"
-format = "csv"
-dir = "./results/"
+dir = "./output/renewal/"
 
 [input]
 r0 = 2.0

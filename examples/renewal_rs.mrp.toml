@@ -1,7 +1,3 @@
-[model]
-spec = "renewal-model-rs"
-version = "0.1.0"
-
 [runtime]
 spec = "process"
 command = "cargo"
@@ -9,8 +5,7 @@ args = ["run", "--manifest-path", "examples/renewal-rs/Cargo.toml"]
 
 [output]
 spec = "filesystem"
-format = "csv"
-dir = "./results/"
+dir = "./output/renewal-rs/"
 
 [input]
 r0 = 2.0

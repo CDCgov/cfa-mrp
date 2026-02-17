@@ -1,5 +1,5 @@
 [project]
-name = "mrp"
+name = "cfa-mrp"
 version = "0.0.1"
 description = "Model Run Protocol — orchestration SDK for computational disease models"
 requires-python = ">=3.11"
@@ -32,6 +32,9 @@ test_rust = { cmd = "cargo test", cwd = "examples/renewal-rs" }
 test_all = ['test_unit', 'test_rust']
 run_renewal = "mrp run examples/renewal/mrp.toml"
 run_renewal_rust = "mrp run examples/renewal-rs/mrp.toml"
+
+[tool.uv.workspace]
+members = ["examples/randomn", "examples/renewal"]
 
 [tool.ruff]
 src = ["src", "tests"]
