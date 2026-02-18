@@ -10,10 +10,9 @@ import pytest
 
 import mrp
 from mrp.api import apply_dict_overrides, run
+from mrp.config import resolve_input
 from mrp.orchestrator import Orchestrator
 from mrp.runtime import RunResult, Runtime
-
-from mrp.config import resolve_input
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
@@ -102,7 +101,9 @@ class TestRunWithDict:
 
 class TestRunWithPath:
     def test_toml_file(self):
-        result = run(FIXTURES / "mrp.with_profiles.toml", orchestrator=_StubOrchestrator())
+        result = run(
+            FIXTURES / "mrp.with_profiles.toml", orchestrator=_StubOrchestrator()
+        )
         assert isinstance(result, RunResult)
         assert result.ok
 

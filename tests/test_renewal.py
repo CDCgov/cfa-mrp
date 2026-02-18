@@ -9,9 +9,9 @@ sys.path.insert(
     0, str(Path(__file__).resolve().parent.parent / "examples" / "renewal" / "src")
 )
 
-from mrp.environment import Environment
 from renewal.model import Model
-from renewal.parameters import Parameters
+
+from mrp.environment import Environment
 
 _BASE_INPUT = {
     "r0": 2.0,
