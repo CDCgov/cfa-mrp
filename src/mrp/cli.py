@@ -74,15 +74,42 @@ def _apply_cli_args(orch: Orchestrator, args: argparse.Namespace) -> None:
             setattr(orch, key, value)
 
 
+def _resolve_config_path(raw: str) -> Path:
+    """Resolve a config argument to a file path.
+
+    Accepts a direct path (e.g. "mrp.toml") or a short name
+    (e.g. "renewal") which expands to "renewal.mrp.toml".
+    """
+    path = Path(raw)
+    if path.exists():
+        return path
+    # Try [name].mrp.toml convention
+    named = Path(f"{raw}.mrp.toml")
+    if named.exists():
+        return named
+    # Return original so argparse gives a useful error downstream
+    return path
+
+
+_SUBCOMMANDS = {"run"}
+
+
 def main(
     argv: list[str] | None = None,
     orchestrator: Orchestrator | None = None,
 ) -> int:
+    # Default command: treat bare `mrp <config> ...` as `mrp run <config> ...`
+    effective = argv if argv is not None else sys.argv[1:]
+    if effective and effective[0] not in _SUBCOMMANDS and not effective[0].startswith("-"):
+        effective = ["run", *effective]
+
     parser = argparse.ArgumentParser(prog="mrp", description="Model Run Protocol CLI")
     sub = parser.add_subparsers(dest="command")
 
     run_parser = sub.add_parser("run", help="Run a model from a TOML config")
-    run_parser.add_argument("config", type=Path, help="Path to TOML config file")
+    run_parser.add_argument(
+        "config", type=_resolve_config_path, help="Config file or name ([name].mrp.toml)"
+    )
     run_parser.add_argument(
         "--set",
         dest="overrides",
@@ -118,7 +145,7 @@ def main(
     orch = orchestrator or DefaultOrchestrator()
     orch.add_arguments(run_parser)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(effective)
 
     if args.command is None:
         parser.print_help()
