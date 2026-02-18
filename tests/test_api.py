@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -285,13 +284,15 @@ class TestResolveRuntime:
         from mrp.runtime.subprocess import SubprocessRuntime
 
         orch = _StubOrchestrator()
-        runtime = orch.resolve_runtime({
-            "runtime": {
-                "spec": "process",
-                "command": "echo",
-                "args": ["hello"],
+        runtime = orch.resolve_runtime(
+            {
+                "runtime": {
+                    "spec": "process",
+                    "command": "echo",
+                    "args": ["hello"],
+                }
             }
-        })
+        )
         assert isinstance(runtime, SubprocessRuntime)
 
 

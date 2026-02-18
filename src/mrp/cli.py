@@ -34,9 +34,7 @@ def main(
     argv: list[str] | None = None,
     orchestrator: Orchestrator | None = None,
 ) -> int:
-    parser = argparse.ArgumentParser(
-        prog="mrp", description="Model Run Protocol CLI"
-    )
+    parser = argparse.ArgumentParser(prog="mrp", description="Model Run Protocol CLI")
     sub = parser.add_subparsers(dest="command")
 
     run_parser = sub.add_parser("run", help="Run a model from a TOML config")

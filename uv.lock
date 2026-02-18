@@ -5,7 +5,7 @@ requires-python = ">=3.11"
 [manifest]
 members = [
     "cfa-mrp",
-    "hello",
+    "randomn",
     "renewal",
 ]
 
@@ -48,17 +48,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
 ]
-
-[[package]]
-name = "hello"
-version = "0.0.1"
-source = { editable = "examples/hello" }
-dependencies = [
-    { name = "cfa-mrp" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "cfa-mrp", editable = "." }]
 
 [[package]]
 name = "iniconfig"
@@ -267,6 +256,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f0/7a/1c7270340330e575b92f397352af856a8c06f230aa3e76f86b39d01b416a/pyyaml-6.0.3-cp314-cp314t-win_amd64.whl", hash = "sha256:4ad1906908f2f5ae4e5a8ddfce73c320c2a1429ec52eafd27138b7f1cbe341c9", size = 174062, upload-time = "2025-09-25T21:32:55.767Z" },
     { url = "https://files.pythonhosted.org/packages/f1/12/de94a39c2ef588c7e6455cfbe7343d3b2dc9d6b6b2f40c4c6565744c873d/pyyaml-6.0.3-cp314-cp314t-win_arm64.whl", hash = "sha256:ebc55a14a21cb14062aa4162f906cd962b28e2e9ea38f9b4391244cd8de4ae0b", size = 149341, upload-time = "2025-09-25T21:32:56.828Z" },
 ]
+
+[[package]]
+name = "randomn"
+version = "0.0.1"
+source = { editable = "examples/randomn" }
+dependencies = [
+    { name = "cfa-mrp" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "cfa-mrp", editable = "." }]
 
 [[package]]
 name = "renewal"

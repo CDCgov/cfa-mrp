@@ -1,0 +1,54 @@
+
+# Formatting
+[tasks.format]
+run = "ruff format . --check"
+env = "uv"
+fail_hook = { suggest_command = "ruff format" }
+
+# Linting
+[tasks.lint]
+run = "ruff check ."
+env = "uv"
+fail_hook = { suggest_command = "ruff check . --fix" }
+
+# Type check
+[tasks.check_types]
+run = "ty check src"
+env = "uv"
+
+# Check markdown
+[tasks.check_markdown]
+fail_hook = { suggest_command = "rumdl fmt ." }
+
+# Run all checks
+[tasks.check]
+run_serial = ["plz:lint", "plz:format", "plz:check_types", "plz:check_markdown"]
+
+# Format markdown
+[tasks.fix_markdown]
+run = "rumdl fmt ."
+env = "uv"
+
+# Run Python tests
+[tasks.test]
+run = "pytest"
+env = "uv"
+
+# Run Rust tests
+[tasks.test_rust]
+run = "cargo test"
+dir = "examples/renewal-rs"
+
+# Run all tests
+[tasks.test_all]
+run_serial = ["plz:test", "plz:test_rust"]
+
+# Run renewal model (Python)
+[tasks.run_renewal]
+run = "mrp run examples/renewal/mrp.toml"
+env = "uv"
+
+# Run renewal model (Rust)
+[tasks.run_renewal_rust]
+run = "mrp run examples/renewal-rs/mrp.toml"
+env = "uv"

@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from mrp.config import apply_overrides, build_run_json, load_toml
-from mrp.runtime import RunResult, Runtime, resolve_runtime as _resolve_runtime
+from mrp.runtime import RunResult, Runtime
+from mrp.runtime import resolve_runtime as _resolve_runtime
 from mrp.stager import cleanup, stage_files
 
 
@@ -124,6 +125,8 @@ class DefaultOrchestrator(Orchestrator):
         self.output_profile = output_profile
 
     def execute(self, config: dict[str, Any], runtime: Runtime | None) -> RunResult:
+        if runtime is None:
+            raise ValueError("DefaultOrchestrator requires a runtime")
         run_json = self.build_run(
             config,
             output_dir=self.output_dir,

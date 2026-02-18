@@ -6,7 +6,9 @@ from pathlib import Path
 import numpy as np
 from numpy.random import SeedSequence, default_rng
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "examples" / "renewal" / "src"))
+sys.path.insert(
+    0, str(Path(__file__).resolve().parent.parent / "examples" / "renewal" / "src")
+)
 
 from renewal.model import Model
 from renewal.parameters import Parameters

@@ -51,7 +51,7 @@ def _parse_cli_sets() -> dict:
             pair = argv[i + 1]
             i += 2
         elif argv[i].startswith("--set="):
-            pair = argv[i][len("--set="):]
+            pair = argv[i][len("--set=") :]
             i += 1
         else:
             i += 1
@@ -185,9 +185,7 @@ class Environment:
         fieldnames = list(columns.keys())
         values = list(columns.values())
         n_rows = len(values[0]) if values else 0
-        rows = [
-            {k: columns[k][i] for k in fieldnames} for i in range(n_rows)
-        ]
+        rows = [{k: columns[k][i] for k in fieldnames} for i in range(n_rows)]
         if self.output_dir:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             with open(self.output_dir / filename, "w", newline="") as f:

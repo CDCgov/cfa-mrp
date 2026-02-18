@@ -21,7 +21,10 @@ class MRPModel(abc.ABC):
         resolve: str = "merge",
     ):
         self.env = env or Environment().load(
-            args=args, configs=configs, json=json, resolve=resolve,
+            args=args,
+            configs=configs,
+            json=json,
+            resolve=resolve,
         )
 
     @property
