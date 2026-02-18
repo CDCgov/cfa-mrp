@@ -148,6 +148,32 @@ class TestOutputDir:
         assert ctx.output_dir == Path("./local/run_0000/")
 
 
+# --- load (stdin) ---
+
+
+class TestLoadStdin:
+    def test_reads_stdin_by_default(self, monkeypatch):
+        data = _transport(input={"r0": 3.0, "seed": 7})
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(data)))
+        ctx = Environment().load()
+        assert ctx.input == {"r0": 3.0}
+        assert ctx.seed == 7
+
+    def test_skips_stdin_when_disabled(self, monkeypatch):
+        monkeypatch.setattr(
+            "sys.stdin", io.StringIO(json.dumps(_transport(input={"r0": 3.0})))
+        )
+        ctx = Environment().load(stdin=False)
+        assert ctx.input == {}
+
+    def test_skips_stdin_when_tty(self, monkeypatch):
+        fake = io.StringIO("")
+        fake.isatty = lambda: True
+        monkeypatch.setattr("sys.stdin", fake)
+        ctx = Environment().load()
+        assert ctx.input == {}
+
+
 # --- from_stdin ---
 
 

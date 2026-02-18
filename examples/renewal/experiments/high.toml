@@ -1,4 +1,0 @@
-# High R0 scenario — merge on top of base config:
-#   mrp run mrp.toml experiments/high.toml
-[input]
-r0 = 3.0

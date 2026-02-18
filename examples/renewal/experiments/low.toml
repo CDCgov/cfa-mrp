@@ -1,4 +1,0 @@
-# Low R0 scenario — merge on top of base config:
-#   mrp run mrp.toml experiments/low.toml
-[input]
-r0 = 1.5

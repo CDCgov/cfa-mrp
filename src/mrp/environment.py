@@ -21,6 +21,8 @@ def _read_file(path: Path) -> dict:
 
 
 def _read_stdin() -> dict:
+    if sys.stdin.isatty():
+        return {}
     raw = sys.stdin.read()
     if not raw.strip():
         return {}
@@ -99,6 +101,7 @@ class Environment:
         self,
         *,
         args: bool = False,
+        stdin: bool = True,
         configs: list[str] | None = None,
         json: dict | None = None,
         resolve: str = "merge",
@@ -106,17 +109,21 @@ class Environment:
         """Load environment from multiple sources.
 
         Merge order (later wins):
-        1. --set key=value CLI arguments (if args=True)
-        2. Config files in order (JSON/TOML)
-        3. json dict
+        1. stdin (JSON, if stdin=True and data is available)
+        2. --set key=value CLI arguments (if args=True)
+        3. Config files in order (JSON/TOML)
+        4. json dict
 
         Args:
             args: Parse --set key=value pairs from sys.argv.
+            stdin: Read JSON from stdin (default True).
             configs: List of file paths (JSON or TOML).
             json: Dict of overrides.
             resolve: Merge strategy. Currently only "merge" (deep merge).
         """
         result: dict = {}
+        if stdin:
+            result = _deep_merge(result, _read_stdin())
         if args:
             result = _deep_merge(result, _parse_cli_sets())
         for path in configs or []:

@@ -18,6 +18,8 @@ env = "uv"
 
 # Check markdown
 [tasks.check_markdown]
+run = "rumdl check ."
+env = "uv"
 fail_hook = { suggest_command = "rumdl fmt ." }
 
 # Run all checks
@@ -45,10 +47,10 @@ run_serial = ["plz:test", "plz:test_rust"]
 
 # Run renewal model (Python)
 [tasks.run_renewal]
-run = "mrp run examples/renewal/mrp.toml"
+run = "mrp run examples/renewal.mrp.toml"
 env = "uv"
 
 # Run renewal model (Rust)
 [tasks.run_renewal_rust]
-run = "mrp run examples/renewal-rs/mrp.toml"
+run = "mrp run examples/renewal_rs.mrp.toml"
 env = "uv"
