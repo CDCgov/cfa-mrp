@@ -45,9 +45,7 @@ def _parse_input(value: str) -> dict[str, Any]:
         try:
             obj = json.load(f)
         except json.JSONDecodeError as e:
-            raise argparse.ArgumentTypeError(
-                f"Invalid JSON in {path}: {e}"
-            ) from e
+            raise argparse.ArgumentTypeError(f"Invalid JSON in {path}: {e}") from e
     if not isinstance(obj, dict):
         raise argparse.ArgumentTypeError(
             f"--input file must contain a JSON object, got {type(obj).__name__}"
@@ -101,7 +99,7 @@ def main(
             "Set input values. Accepts a JSON file path, "
             "inline JSON object, or key=value pair. "
             "Can be repeated. (e.g. --input params.json, "
-            '--input \'{"r0": 3.0}\', --input r0=3.0)'
+            "--input '{\"r0\": 3.0}', --input r0=3.0)"
         ),
     )
     run_parser.add_argument(
@@ -132,6 +130,54 @@ def main(
     return 0
 
 
+def _log_inputs(
+    config: dict[str, Any],
+    config_path: Path,
+    overrides: list[str],
+    input_args: list[str],
+) -> None:
+    """Log resolved inputs and their sources to stderr."""
+    inputs = config.get("input", {})
+    if not inputs:
+        print("Running model with no inputs", file=sys.stderr)
+        return
+
+    set_keys: set[str] = set()
+    for o in overrides:
+        key, _, _ = o.partition("=")
+        parts = key.strip().split(".")
+        if len(parts) >= 2 and parts[0] == "input":
+            set_keys.add(parts[1])
+
+    input_keys: set[str] = set()
+    for raw in input_args:
+        parsed = _parse_input(raw)
+        input_keys.update(parsed.keys())
+
+    # Group keys by source, preserving original order
+    from_file: dict[str, Any] = {}
+    from_set: dict[str, Any] = {}
+    from_input: dict[str, Any] = {}
+    for key, value in inputs.items():
+        if key in input_keys:
+            from_input[key] = value
+        elif key in set_keys:
+            from_set[key] = value
+        else:
+            from_file[key] = value
+
+    print("Running model with inputs", file=sys.stderr)
+    for section, label in [
+        (from_file, f"from {config_path}"),
+        (from_set, "from --set"),
+        (from_input, "from --input"),
+    ]:
+        if section:
+            print(f"  {label}:", file=sys.stderr)
+            for key, value in section.items():
+                print(f"    {key}: {value!r}", file=sys.stderr)
+
+
 def _run(args: argparse.Namespace, orch: Orchestrator) -> int:
     profiles = args.profile or {}
     runtime_profile = profiles.get("runtime")
@@ -148,6 +194,9 @@ def _run(args: argparse.Namespace, orch: Orchestrator) -> int:
     for raw in args.input_values:
         parsed = _parse_input(raw)
         config.setdefault("input", {}).update(parsed)
+
+    _log_inputs(config, args.config, args.overrides or [], args.input_values)
+
     runtime = orch.resolve_runtime(config, runtime_profile=runtime_profile)
     result = orch.execute(config, runtime)
 
