@@ -5,7 +5,7 @@ from mrp import MRPModel
 
 @dataclass
 class Parameters:
-    n: int = 10
+    n: int
 
 
 class Model(MRPModel):

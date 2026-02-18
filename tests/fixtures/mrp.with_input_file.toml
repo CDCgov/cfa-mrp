@@ -1,0 +1,5 @@
+input = "input_params.json"
+
+[model]
+spec = "test-model"
+version = "0.1.0"

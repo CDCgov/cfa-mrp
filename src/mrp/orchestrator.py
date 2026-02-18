@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from mrp.config import apply_overrides, build_run_json, load_toml
+from mrp.config import apply_overrides, build_run_json, load_toml, resolve_input
 from mrp.runtime import RunResult, Runtime
 from mrp.runtime import resolve_runtime as _resolve_runtime
 from mrp.stager import cleanup, stage_files
@@ -57,6 +57,12 @@ class Orchestrator(ABC):
         if not configs:
             raise ValueError("At least one config is required")
 
+        # Track base_dir from the first file-based config for relative paths
+        base_dir = None
+        first = configs[0]
+        if isinstance(first, (str, Path)):
+            base_dir = Path(first).resolve().parent
+
         result = _load_single_config(configs[0])
         for layer in configs[1:]:
             loaded = _load_single_config(layer)
@@ -64,6 +70,8 @@ class Orchestrator(ABC):
 
         if overrides:
             result = apply_overrides(result, overrides)
+
+        result = resolve_input(result, base_dir=base_dir)
 
         return result
 

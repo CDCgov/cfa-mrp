@@ -28,12 +28,12 @@ def apply_overrides(config: dict[str, Any], overrides: list[str]) -> dict[str, A
         for part in parts[:-1]:
             target = target.setdefault(part, {})
 
-        target[parts[-1]] = _parse_value(value.strip())
+        target[parts[-1]] = parse_value(value.strip())
 
     return config
 
 
-def _parse_value(value: str) -> Any:
+def parse_value(value: str) -> Any:
     if value.lower() == "true":
         return True
     if value.lower() == "false":
@@ -47,6 +47,22 @@ def _parse_value(value: str) -> Any:
     except ValueError:
         pass
     return value
+
+
+def resolve_input(
+    config: dict[str, Any], base_dir: Path | None = None
+) -> dict[str, Any]:
+    """If input is a file path string, load the JSON file."""
+    raw = config.get("input")
+    if not isinstance(raw, str):
+        return config
+    config = copy.deepcopy(config)
+    path = Path(raw)
+    if base_dir and not path.is_absolute():
+        path = base_dir / path
+    with open(path) as f:
+        config["input"] = json.load(f)
+    return config
 
 
 def _select_profile(

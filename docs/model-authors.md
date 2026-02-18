@@ -30,10 +30,7 @@ from mrp import Environment
 
 
 def run():
-    env = Environment().load(
-        args=True,
-        configs=["defaults.toml"],
-    )
+    env = Environment().load()
     values = env.rng.random(10).tolist()
     env.write_csv(
         "output.csv",
@@ -60,7 +57,6 @@ class Model(MRPModel):
         self.write_csv(
             "output.csv",
             {"step": list(range(len(values))), "value": values},
-        )
 
 
 # Uses args=True by default
@@ -97,6 +93,13 @@ population_size = 100000
 sim_length = 200
 ```
 
+You can also point `input` at a JSON file instead of inlining
+values:
+
+```toml
+input = "parameters.json"
+```
+
 | Section     | Purpose                                          |
 |-------------|--------------------------------------------------|
 | `[model]`   | Name and version of your model                   |
@@ -107,19 +110,28 @@ sim_length = 200
 ### Run your model, with optional arguments
 
 ```bash
-mrp run --set input.seed=42
+mrp run mrp.toml --input seed=42
 ```
 
 ## Overriding parameters
 
 ### From the CLI
 
-```bash
-# Change a single parameter
-mrp run config.toml --set input.r0=4.0
+Use `--input` to override input parameters. It accepts key=value
+pairs, JSON files, or inline JSON:
 
-# Change multiple parameters
-mrp run config.toml --set input.r0=4.0 --set input.sim_length=500
+```bash
+# Key=value pair
+mrp run config.toml --input r0=4.0
+
+# Multiple values
+mrp run config.toml --input r0=4.0 --input seed=42
+
+# From a JSON file
+mrp run config.toml --input params.json
+
+# Inline JSON
+mrp run config.toml --input '{"r0": 4.0, "seed": 42}'
 
 # Override the output directory
 mrp run config.toml --output-dir ./my_output/
@@ -130,7 +142,7 @@ mrp run config.toml --output-dir ./my_output/
 `Environment().load()` merges configuration in this order
 (later wins):
 
-1. `--set key=value` CLI arguments (if `args=True`)
+1. CLI arguments — `--input` and `--set` (if `args=True`)
 2. Config files in order (JSON or TOML)
 3. `json` dict
 
@@ -149,10 +161,10 @@ env = Environment().load(
 )
 ```
 
-Dotted keys in `--set` create nested structure:
-`--set input.seed=42` produces `{"input": {"seed": 42}}`.
-Values are automatically parsed as JSON when possible (numbers,
-booleans), falling back to strings.
+`--input seed=42` sets `{"input": {"seed": 42}}` directly.
+`--set input.seed=42` does the same using dotted paths. Values
+are automatically parsed as numbers/booleans when possible,
+falling back to strings.
 
 ## Sample architectures
 

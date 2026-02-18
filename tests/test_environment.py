@@ -155,28 +155,30 @@ class TestFromStdin:
     def test_parses_json_from_stdin(self, monkeypatch):
         data = _transport(input={"r0": 3.0, "seed": 10})
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(data)))
-        ctx = Environment.from_stdin()
+        ctx = Environment.from_args("stdin")
         assert ctx.input == {"r0": 3.0}
         assert ctx.seed == 10
 
-    def test_exits_on_empty_stdin(self, monkeypatch):
+    def test_empty_stdin_returns_empty(self, monkeypatch):
         monkeypatch.setattr("sys.stdin", io.StringIO(""))
-        with pytest.raises(SystemExit, match="1"):
-            Environment.from_stdin()
+        ctx = Environment.from_args("stdin")
+        assert ctx.input == {}
+        assert ctx.seed == 0
 
-    def test_exits_on_whitespace_stdin(self, monkeypatch):
+    def test_whitespace_stdin_returns_empty(self, monkeypatch):
         monkeypatch.setattr("sys.stdin", io.StringIO("   \n  "))
-        with pytest.raises(SystemExit, match="1"):
-            Environment.from_stdin()
+        ctx = Environment.from_args("stdin")
+        assert ctx.input == {}
+        assert ctx.seed == 0
 
 
 # --- from_run_json ---
 
 
 class TestFromRunJson:
-    def test_constructs_from_run_json(self):
+    def test_constructs_from_dict(self):
         data = _transport(input={"r0": 3.0, "seed": 10})
-        ctx = Environment.from_run_json(data)
+        ctx = Environment.from_args(data)
         assert ctx.input == {"r0": 3.0}
         assert ctx.seed == 10
 

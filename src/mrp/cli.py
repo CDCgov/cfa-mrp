@@ -3,10 +3,56 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
+from typing import Any
 
+from mrp.config import parse_value
 from mrp.orchestrator import DefaultOrchestrator, Orchestrator
+
+
+def _parse_input(value: str) -> dict[str, Any]:
+    """Parse a single --input value into a dict.
+
+    Accepts:
+      - A path to a JSON file (e.g. "params.json")
+      - An inline JSON object (e.g. '{"r0": 3.0}')
+      - A key=value pair (e.g. "r0=3.0")
+    """
+    stripped = value.strip()
+
+    # Inline JSON object
+    if stripped.startswith("{"):
+        try:
+            obj = json.loads(stripped)
+        except json.JSONDecodeError as e:
+            raise argparse.ArgumentTypeError(f"Invalid JSON: {e}") from e
+        if not isinstance(obj, dict):
+            raise argparse.ArgumentTypeError("--input JSON must be an object")
+        return obj
+
+    # key=value pair
+    if "=" in stripped and not stripped.endswith(".json"):
+        key, _, val = stripped.partition("=")
+        return {key.strip(): parse_value(val.strip())}
+
+    # File path
+    path = Path(stripped)
+    if not path.exists():
+        raise argparse.ArgumentTypeError(f"File not found: {path}")
+    with open(path) as f:
+        try:
+            obj = json.load(f)
+        except json.JSONDecodeError as e:
+            raise argparse.ArgumentTypeError(
+                f"Invalid JSON in {path}: {e}"
+            ) from e
+    if not isinstance(obj, dict):
+        raise argparse.ArgumentTypeError(
+            f"--input file must contain a JSON object, got {type(obj).__name__}"
+        )
+    return obj
 
 
 def _parse_profiles(value: str) -> dict[str, str]:
@@ -24,7 +70,7 @@ def _parse_profiles(value: str) -> dict[str, str]:
 
 def _apply_cli_args(orch: Orchestrator, args: argparse.Namespace) -> None:
     """Set orchestrator attrs from parsed CLI args."""
-    skip = {"command", "config", "overrides", "output_dir", "profile"}
+    skip = {"command", "config", "overrides", "output_dir", "profile", "input_values"}
     for key, value in vars(args).items():
         if key not in skip and hasattr(orch, key):
             setattr(orch, key, value)
@@ -45,6 +91,18 @@ def main(
         action="append",
         default=[],
         help="Override config values (e.g. --set input.r0=3.0)",
+    )
+    run_parser.add_argument(
+        "--input",
+        dest="input_values",
+        action="append",
+        default=[],
+        help=(
+            "Set input values. Accepts a JSON file path, "
+            "inline JSON object, or key=value pair. "
+            "Can be repeated. (e.g. --input params.json, "
+            '--input \'{"r0": 3.0}\', --input r0=3.0)'
+        ),
     )
     run_parser.add_argument(
         "--output-dir",
@@ -85,6 +143,11 @@ def _run(args: argparse.Namespace, orch: Orchestrator) -> int:
     _apply_cli_args(orch, args)
 
     config = orch.load_config(args.config, overrides=args.overrides or None)
+
+    # Merge --input values into config["input"]
+    for raw in args.input_values:
+        parsed = _parse_input(raw)
+        config.setdefault("input", {}).update(parsed)
     runtime = orch.resolve_runtime(config, runtime_profile=runtime_profile)
     result = orch.execute(config, runtime)
 

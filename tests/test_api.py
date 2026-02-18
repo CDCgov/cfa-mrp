@@ -13,6 +13,8 @@ from mrp.api import apply_dict_overrides, run
 from mrp.orchestrator import Orchestrator
 from mrp.runtime import RunResult, Runtime
 
+from mrp.config import resolve_input
+
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
@@ -100,7 +102,7 @@ class TestRunWithDict:
 
 class TestRunWithPath:
     def test_toml_file(self):
-        result = run(FIXTURES / "mrp.with_profiles.toml")
+        result = run(FIXTURES / "mrp.with_profiles.toml", orchestrator=_StubOrchestrator())
         assert isinstance(result, RunResult)
         assert result.ok
 
@@ -337,3 +339,52 @@ class TestTopLevelExports:
         from mrp.runtime import resolve_runtime
 
         assert mrp.resolve_runtime is resolve_runtime
+
+
+class TestResolveInput:
+    def test_string_path_loads_json(self, tmp_path):
+        json_file = tmp_path / "params.json"
+        json_file.write_text('{"r0": 3.0, "seed": 1}')
+        config = {"input": str(json_file)}
+        result = resolve_input(config)
+        assert result["input"] == {"r0": 3.0, "seed": 1}
+
+    def test_relative_path_with_base_dir(self, tmp_path):
+        subdir = tmp_path / "sub"
+        subdir.mkdir()
+        json_file = subdir / "params.json"
+        json_file.write_text('{"r0": 2.0}')
+        config = {"input": "params.json"}
+        result = resolve_input(config, base_dir=subdir)
+        assert result["input"] == {"r0": 2.0}
+
+    def test_inline_table_is_noop(self):
+        config = {"input": {"r0": 2.0}}
+        result = resolve_input(config)
+        assert result["input"] == {"r0": 2.0}
+
+    def test_no_input_is_noop(self):
+        config = {"model": {"spec": "test"}}
+        result = resolve_input(config)
+        assert "input" not in result
+
+    def test_original_not_mutated(self, tmp_path):
+        json_file = tmp_path / "params.json"
+        json_file.write_text('{"r0": 3.0}')
+        config = {"input": str(json_file)}
+        resolve_input(config)
+        assert config["input"] == str(json_file)
+
+    def test_file_not_found(self):
+        config = {"input": "/nonexistent/params.json"}
+        with pytest.raises(FileNotFoundError):
+            resolve_input(config)
+
+
+class TestLoadConfigWithInputFile:
+    def test_input_file_resolved(self):
+        orch = _StubOrchestrator()
+        config = orch.load_config(FIXTURES / "mrp.with_input_file.toml")
+        assert isinstance(config["input"], dict)
+        assert config["input"]["r0"] == 2.0
+        assert config["input"]["seed"] == 42
