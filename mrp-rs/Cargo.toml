@@ -1,5 +1,5 @@
 [package]
-name = "mrp"
+name = "cfa-mrp"
 description = "CFA Model Run Protocol sdk"
 version = "0.0.2"
 edition = "2024"
