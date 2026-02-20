@@ -25,6 +25,7 @@ fail_hook = { suggest_command = "rumdl fmt ." }
 # Run all checks
 [tasks.check]
 run_serial = ["plz:lint", "plz:format", "plz:check_types", "plz:check_markdown"]
+git_hook = "pre-commit"
 
 # Format markdown
 [tasks.fix_markdown]
