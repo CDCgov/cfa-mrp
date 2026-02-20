@@ -1,6 +1,6 @@
 [project]
 name = "cfa-mrp"
-version = "0.0.2"
+version = "0.0.3"
 description = "Model Run Protocol — orchestration SDK for computational disease models"
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.4.2"]
