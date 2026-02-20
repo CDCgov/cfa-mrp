@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import sys
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -66,7 +67,9 @@ def resolve_input(
 
 
 def _select_profile(
-    section: dict[str, Any], profile_name: str | None
+    section: dict[str, Any],
+    profile_name: str | None,
+    section_name: str | None = None,
 ) -> dict[str, Any]:
     """Select a profile from a section, or return the section as-is if no profiles."""
     profiles = section.get("profile")
@@ -74,13 +77,28 @@ def _select_profile(
         return section
 
     if profile_name and profile_name in profiles:
+        if section_name:
+            print(
+                f"Using {section_name} profile: {profile_name}",
+                file=sys.stderr,
+            )
         return dict(profiles[profile_name])
 
     # Default: use "default" profile if present, otherwise first key
     if "default" in profiles:
+        if section_name:
+            print(
+                f"Using {section_name} profile: default",
+                file=sys.stderr,
+            )
         return dict(profiles["default"])
 
     first_key = next(iter(profiles))
+    if section_name:
+        print(
+            f"Using {section_name} profile: {first_key}",
+            file=sys.stderr,
+        )
     return dict(profiles[first_key])
 
 
@@ -120,7 +138,7 @@ def build_run_json(
 
     # Override filesystem output dir if requested
     output = result.get("output", {})
-    output_section = _select_profile(output, output_profile)
+    output_section = _select_profile(output, output_profile, section_name="output")
 
     if output_section.get("spec") == "filesystem" and output_dir:
         if output.get("profile"):

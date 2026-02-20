@@ -8,6 +8,10 @@ version = "0.0.1"
 env = "uv"
 command = "renewal"
 
+[runtime.profile.rust]
+command = "cargo"
+args = ["run", "--manifest-path", "examples/renewal-rs/Cargo.toml"]
+
 [output]
 spec = "filesystem"
 dir = "./output/renewal/"

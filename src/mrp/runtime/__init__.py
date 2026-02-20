@@ -29,7 +29,7 @@ def resolve_runtime(
 ) -> Runtime:
     """Factory: build the right Runtime adapter from config."""
     runtime = config.get("runtime", {})
-    selected = _select_profile(runtime, runtime_profile)
+    selected = _select_profile(runtime, runtime_profile, section_name="runtime")
 
     spec = selected.get("spec", "process")
 

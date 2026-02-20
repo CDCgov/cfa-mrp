@@ -15,7 +15,6 @@ version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
-    { name = "rumdl" },
 ]
 
 [package.dev-dependencies]
@@ -23,20 +22,19 @@ dev = [
     { name = "poethepoet" },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "rumdl" },
     { name = "ty" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "numpy", specifier = ">=2.4.2" },
-    { name = "rumdl", specifier = ">=0.1.18" },
-]
+requires-dist = [{ name = "numpy", specifier = ">=2.4.2" }]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "poethepoet", specifier = ">=0.41.0" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "ruff", specifier = ">=0.15.0" },
+    { name = "rumdl", specifier = ">=0.1.18" },
     { name = "ty", specifier = ">=0.0.15" },
 ]
 

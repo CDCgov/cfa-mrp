@@ -52,5 +52,5 @@ env = "uv"
 
 # Run renewal model (Rust)
 [tasks.run_renewal_rust]
-run = "mrp run examples/renewal_rs.mrp.toml"
+run = "mrp run examples/renewal.mrp.toml --profile runtime=rust"
 env = "uv"

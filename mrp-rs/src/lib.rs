@@ -3,10 +3,12 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-pub struct Environment {
-    pub input: serde_json::Map<String, Value>,
+pub struct Environment<I = ()> {
+    input_json: serde_json::Map<String, Value>,
+    pub input: Option<I>,
     pub seed: u64,
     pub replicate: u64,
     pub files: HashMap<String, PathBuf>,
@@ -15,18 +17,18 @@ pub struct Environment {
 
 impl Environment {
     pub fn from_json(data: Value) -> Self {
-        let mut input = data
+        let mut input_json = data
             .get("input")
             .and_then(|v| v.as_object())
             .cloned()
             .unwrap_or_default();
 
-        let seed = input
+        let seed = input_json
             .remove("seed")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
 
-        let replicate = input
+        let replicate = input_json
             .remove("replicate")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
@@ -45,7 +47,8 @@ impl Environment {
         let output = data.get("output").cloned().unwrap_or(Value::Null);
 
         Self {
-            input,
+            input_json,
+            input: None,
             seed,
             replicate,
             files,
@@ -64,6 +67,31 @@ impl Environment {
         }
         let data: Value = serde_json::from_str(&raw).expect("failed to parse JSON from stdin");
         Self::from_json(data)
+    }
+
+    pub fn with_input_type<I: DeserializeOwned>(self) -> Environment<I> {
+        let input_value = Value::Object(self.input_json.clone());
+        let input = serde_json::from_value(input_value).expect("failed to deserialize input");
+        Environment {
+            input_json: self.input_json,
+            input: Some(input),
+            seed: self.seed,
+            replicate: self.replicate,
+            files: self.files,
+            output: self.output,
+        }
+    }
+}
+
+impl<I: DeserializeOwned> Environment<I> {
+    pub fn load() -> Self {
+        Environment::from_stdin().with_input_type::<I>()
+    }
+}
+
+impl<I> Environment<I> {
+    pub fn input_json(&self) -> &serde_json::Map<String, Value> {
+        &self.input_json
     }
 
     pub fn output_dir(&self) -> Option<PathBuf> {
@@ -130,6 +158,7 @@ impl Environment {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde::Deserialize;
     use serde_json::json;
 
     #[test]
@@ -153,11 +182,28 @@ mod tests {
         let ctx = Environment::from_json(data);
         assert_eq!(ctx.seed, 42);
         assert_eq!(ctx.replicate, 1);
-        assert_eq!(ctx.input.get("r0").unwrap().as_f64().unwrap(), 2.0);
-        assert!(!ctx.input.contains_key("seed"));
-        assert!(!ctx.input.contains_key("replicate"));
+        assert_eq!(ctx.input_json().get("r0").unwrap().as_f64().unwrap(), 2.0);
+        assert!(!ctx.input_json().contains_key("seed"));
+        assert!(!ctx.input_json().contains_key("replicate"));
         assert_eq!(ctx.files.get("data").unwrap(), &PathBuf::from("/tmp/data.csv"));
         assert_eq!(ctx.output_dir(), Some(PathBuf::from("/tmp/output")));
+    }
+
+    #[test]
+    fn test_with_input_type() {
+        #[derive(Deserialize, Debug, PartialEq)]
+        struct Params {
+            r0: f64,
+        }
+        let data = json!({
+            "input": {
+                "seed": 42,
+                "r0": 2.5
+            }
+        });
+        let ctx = Environment::from_json(data).with_input_type::<Params>();
+        assert_eq!(ctx.input, Some(Params { r0: 2.5 }));
+        assert_eq!(ctx.seed, 42);
     }
 
     #[test]
@@ -195,7 +241,7 @@ mod tests {
         let ctx = Environment::from_json(data);
         assert_eq!(ctx.seed, 0);
         assert_eq!(ctx.replicate, 0);
-        assert!(ctx.input.is_empty());
+        assert!(ctx.input_json().is_empty());
         assert!(ctx.files.is_empty());
         assert_eq!(ctx.output_dir(), None);
     }
