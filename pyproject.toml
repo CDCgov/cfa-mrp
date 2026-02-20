@@ -3,7 +3,7 @@ name = "cfa-mrp"
 version = "0.0.1"
 description = "Model Run Protocol — orchestration SDK for computational disease models"
 requires-python = ">=3.11"
-dependencies = ["numpy>=2.4.2", "rumdl>=0.1.18"]
+dependencies = ["numpy>=2.4.2"]
 
 [project.scripts]
 mrp = "mrp.cli:main"
@@ -16,7 +16,7 @@ build-backend = "hatchling.build"
 packages = ["src/mrp"]
 
 [dependency-groups]
-dev = ["poethepoet>=0.41.0", "pytest>=9.0.2", "ruff>=0.15.0", "ty>=0.0.15"]
+dev = ["poethepoet>=0.41.0", "pytest>=9.0.2", "rumdl>=0.1.18", "ruff>=0.15.0", "ty>=0.0.15"]
 
 [tool.poe.tasks]
 check_lint = "ruff check ."
