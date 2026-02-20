@@ -280,3 +280,93 @@ class TestWriteCsv:
         ctx.write_csv("empty.csv", {"a": [], "b": []})
         content = (tmp_path / "empty.csv").read_text()
         assert content.strip() == "a,b"
+
+
+# --- csv_writer (streaming) ---
+
+
+class TestCsvWriter:
+    def test_streaming_to_filesystem(self, tmp_path):
+        ctx = Environment(
+            _transport(output={"spec": "filesystem", "dir": str(tmp_path / "out")})
+        )
+        with ctx.csv_writer("data.csv", ["step", "value"]) as w:
+            w.write_row([0, 1.5])
+            w.write_row([1, 2.5])
+        content = (tmp_path / "out" / "data.csv").read_text()
+        lines = content.strip().split("\n")
+        assert lines[0] == "step,value"
+        assert lines[1] == "0,1.5"
+        assert lines[2] == "1,2.5"
+
+    def test_streaming_dict_rows(self, tmp_path):
+        ctx = Environment(
+            _transport(output={"spec": "filesystem", "dir": str(tmp_path)})
+        )
+        with ctx.csv_writer("data.csv", ["a", "b"]) as w:
+            w.write_row({"b": 2, "a": 1})
+        content = (tmp_path / "data.csv").read_text()
+        lines = content.strip().split("\n")
+        assert lines[0] == "a,b"
+        assert lines[1] == "1,2"
+
+    def test_streaming_to_stdout(self, monkeypatch):
+        buf = io.StringIO()
+        monkeypatch.setattr("sys.stdout", buf)
+        ctx = Environment(_transport())
+        w = ctx.csv_writer("ignored.csv", ["x", "y"])
+        w.write_row([1, 2])
+        w.close()
+        lines = buf.getvalue().strip().splitlines()
+        assert lines[0] == "x,y"
+        assert lines[1] == "1,2"
+
+    def test_headers_only(self, tmp_path):
+        ctx = Environment(
+            _transport(output={"spec": "filesystem", "dir": str(tmp_path)})
+        )
+        with ctx.csv_writer("empty.csv", ["a", "b"]) as w:
+            pass
+        content = (tmp_path / "empty.csv").read_text()
+        assert content.strip() == "a,b"
+
+
+# --- create_csv / write_csv_row (stateful) ---
+
+
+class TestStatefulCsv:
+    def test_create_and_write_rows(self, tmp_path):
+        ctx = Environment(
+            _transport(output={"spec": "filesystem", "dir": str(tmp_path)})
+        )
+        ctx.create_csv("out", "data.csv", ["a", "b"])
+        ctx.write_csv_row("out", [1, 2])
+        ctx.write_csv_row("out", [3, 4])
+        ctx.close_csv("out")
+        content = (tmp_path / "data.csv").read_text()
+        lines = content.strip().split("\n")
+        assert lines[0] == "a,b"
+        assert lines[1] == "1,2"
+        assert lines[2] == "3,4"
+
+    def test_multiple_writers(self, tmp_path):
+        ctx = Environment(
+            _transport(output={"spec": "filesystem", "dir": str(tmp_path)})
+        )
+        ctx.create_csv("a", "a.csv", ["x"])
+        ctx.create_csv("b", "b.csv", ["y"])
+        ctx.write_csv_row("a", [1])
+        ctx.write_csv_row("b", [2])
+        ctx.close_all_csv()
+        assert (tmp_path / "a.csv").read_text().strip() == "x\n1"
+        assert (tmp_path / "b.csv").read_text().strip() == "y\n2"
+
+    def test_dict_rows(self, tmp_path):
+        ctx = Environment(
+            _transport(output={"spec": "filesystem", "dir": str(tmp_path)})
+        )
+        ctx.create_csv("out", "data.csv", ["a", "b"])
+        ctx.write_csv_row("out", {"b": 2, "a": 1})
+        ctx.close_csv("out")
+        lines = (tmp_path / "data.csv").read_text().strip().split("\n")
+        assert lines[1] == "1,2"

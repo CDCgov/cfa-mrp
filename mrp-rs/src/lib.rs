@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io::{self, BufWriter, Read, Write};
 use std::path::PathBuf;
 
 use serde::de::DeserializeOwned;
@@ -13,6 +13,7 @@ pub struct Environment<I = ()> {
     pub replicate: u64,
     pub files: HashMap<String, PathBuf>,
     output: Value,
+    csv_writers: HashMap<String, CsvWriter>,
 }
 
 impl Environment {
@@ -53,6 +54,7 @@ impl Environment {
             replicate,
             files,
             output,
+            csv_writers: HashMap::new(),
         }
     }
 
@@ -79,6 +81,7 @@ impl Environment {
             replicate: self.replicate,
             files: self.files,
             output: self.output,
+            csv_writers: HashMap::new(),
         }
     }
 }
@@ -133,6 +136,44 @@ impl<I> Environment<I> {
         }
     }
 
+    pub fn create_csv(&mut self, id: &str, filename: &str, headers: &[&str]) {
+        let writer = self.csv_writer(filename, headers);
+        self.csv_writers.insert(id.to_string(), writer);
+    }
+
+    pub fn write_csv_row(&mut self, id: &str, row: &[&str]) {
+        self.csv_writers
+            .get_mut(id)
+            .unwrap_or_else(|| panic!("no csv writer with id '{id}'"))
+            .write_row(row);
+    }
+
+    pub fn close_csv(&mut self, id: &str) {
+        if let Some(mut w) = self.csv_writers.remove(id) {
+            w.flush();
+        }
+    }
+
+    pub fn close_all_csv(&mut self) {
+        for (_, mut w) in self.csv_writers.drain() {
+            w.flush();
+        }
+    }
+
+    pub fn csv_writer(&self, filename: &str, headers: &[&str]) -> CsvWriter {
+        let writer: Box<dyn Write> = if let Some(dir) = self.output_dir() {
+            fs::create_dir_all(&dir).expect("failed to create output directory");
+            let file =
+                fs::File::create(dir.join(filename)).expect("failed to create output file");
+            Box::new(BufWriter::new(file))
+        } else {
+            Box::new(BufWriter::new(io::stdout()))
+        };
+        let mut wtr = csv::Writer::from_writer(writer);
+        wtr.write_record(headers).unwrap();
+        CsvWriter { wtr }
+    }
+
     pub fn write_csv(&self, filename: &str, headers: &[&str], rows: &[Vec<String>]) {
         if let Some(dir) = self.output_dir() {
             fs::create_dir_all(&dir).expect("failed to create output directory");
@@ -152,6 +193,26 @@ impl<I> Environment<I> {
             }
             wtr.flush().unwrap();
         }
+    }
+}
+
+pub struct CsvWriter {
+    wtr: csv::Writer<Box<dyn Write>>,
+}
+
+impl CsvWriter {
+    pub fn write_row(&mut self, row: &[&str]) {
+        self.wtr.write_record(row).unwrap();
+    }
+
+    pub fn flush(&mut self) {
+        self.wtr.flush().unwrap();
+    }
+}
+
+impl Drop for CsvWriter {
+    fn drop(&mut self) {
+        self.wtr.flush().ok();
     }
 }
 
@@ -244,5 +305,50 @@ mod tests {
         assert!(ctx.input_json().is_empty());
         assert!(ctx.files.is_empty());
         assert_eq!(ctx.output_dir(), None);
+    }
+
+    #[test]
+    fn test_create_csv_stateful() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = json!({
+            "input": {},
+            "output": {
+                "spec": "filesystem",
+                "dir": dir.path().to_str().unwrap()
+            }
+        });
+        let mut ctx = Environment::from_json(data);
+        ctx.create_csv("out", "stateful.csv", &["a", "b"]);
+        ctx.write_csv_row("out", &["1", "2"]);
+        ctx.write_csv_row("out", &["3", "4"]);
+        ctx.close_csv("out");
+        let content = std::fs::read_to_string(dir.path().join("stateful.csv")).unwrap();
+        let lines: Vec<&str> = content.trim().lines().collect();
+        assert_eq!(lines[0], "a,b");
+        assert_eq!(lines[1], "1,2");
+        assert_eq!(lines[2], "3,4");
+    }
+
+    #[test]
+    fn test_csv_writer_streaming() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = json!({
+            "input": {},
+            "output": {
+                "spec": "filesystem",
+                "dir": dir.path().to_str().unwrap()
+            }
+        });
+        let ctx = Environment::from_json(data);
+        let mut w = ctx.csv_writer("stream.csv", &["step", "value"]);
+        w.write_row(&["0", "1.5"]);
+        w.write_row(&["1", "2.5"]);
+        w.flush();
+        drop(w);
+        let content = std::fs::read_to_string(dir.path().join("stream.csv")).unwrap();
+        let lines: Vec<&str> = content.trim().lines().collect();
+        assert_eq!(lines[0], "step,value");
+        assert_eq!(lines[1], "0,1.5");
+        assert_eq!(lines[2], "1,2.5");
     }
 }

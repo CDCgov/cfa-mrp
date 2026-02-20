@@ -89,6 +89,7 @@ class Environment:
         self.files = {k: Path(v) for k, v in model.get("files", {}).items()}
         self._output = data.get("output", {})
         self._rng: Generator | None = None
+        self._csv_writers: dict[str, CsvWriter] = {}
 
     @property
     def rng(self) -> Generator:
@@ -188,6 +189,28 @@ class Environment:
             else:
                 sys.stdout.write(data)
 
+    def create_csv(self, id: str, filename: str, fieldnames: list[str]) -> None:
+        self._csv_writers[id] = self.csv_writer(filename, fieldnames)
+
+    def write_csv_row(self, id: str, row: list | dict) -> None:
+        self._csv_writers[id].write_row(row)
+
+    def close_csv(self, id: str) -> None:
+        self._csv_writers.pop(id).close()
+
+    def close_all_csv(self) -> None:
+        for w in self._csv_writers.values():
+            w.close()
+        self._csv_writers.clear()
+
+    def csv_writer(self, filename: str, fieldnames: list[str]) -> CsvWriter:
+        if self.output_dir:
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            f = open(self.output_dir / filename, "w", newline="")
+        else:
+            f = sys.stdout
+        return CsvWriter(f, fieldnames, close=f is not sys.stdout)
+
     def write_csv(self, filename: str, columns: dict[str, list]):
         fieldnames = list(columns.keys())
         values = list(columns.values())
@@ -203,3 +226,28 @@ class Environment:
             w = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
             w.writeheader()
             w.writerows(rows)
+
+
+class CsvWriter:
+    def __init__(self, f, fieldnames: list[str], *, close: bool = True):
+        self._f = f
+        self._close = close
+        self._writer = csv.writer(f)
+        self._fieldnames = fieldnames
+        self._writer.writerow(fieldnames)
+
+    def write_row(self, row: list | dict):
+        if isinstance(row, dict):
+            self._writer.writerow([row[k] for k in self._fieldnames])
+        else:
+            self._writer.writerow(row)
+
+    def close(self):
+        if self._close:
+            self._f.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
