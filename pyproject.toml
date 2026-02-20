@@ -16,28 +16,7 @@ build-backend = "hatchling.build"
 packages = ["src/mrp"]
 
 [dependency-groups]
-dev = [
-  "poethepoet>=0.41.0",
-  "pytest>=9.0.2",
-  "rumdl>=0.1.18",
-  "ruff>=0.15.0",
-  "ty>=0.0.15",
-]
-
-[tool.poe.tasks]
-check_lint = "ruff check ."
-check_format = "ruff format . --check"
-check_types = "ty check src"
-check_markdown = "rumdl check ."
-check_all = ['check_lint', 'check_format', "check_types", "check_markdown"]
-fix_lint = "ruff check . --fix"
-fix_format = "ruff format ."
-fix_markdown = "rumdl fmt ."
-test_unit = "pytest"
-test_rust = { cmd = "cargo test", cwd = "examples/renewal-rs" }
-test_all = ['test_unit', 'test_rust']
-run_renewal = "mrp run examples/renewal/mrp.toml"
-run_renewal_rust = "mrp run examples/renewal-rs/mrp.toml"
+dev = ["pytest>=9.0.2", "rumdl>=0.1.18", "ruff>=0.15.0", "ty>=0.0.15"]
 
 [tool.uv.workspace]
 members = ["examples/randomn", "examples/renewal"]

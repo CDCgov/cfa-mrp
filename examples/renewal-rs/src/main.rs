@@ -6,7 +6,7 @@ use parameters::{Input, Parameters};
 use renewal::RenewalModel;
 
 fn main() {
-    let ctx = mrp::Environment::<Input>::load();
+    let ctx = cfa_mrp::Environment::<Input>::load();
     let input = ctx.input.as_ref().expect("missing input");
     let parameters = Parameters::new(input, ctx.seed);
 
