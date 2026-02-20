@@ -325,7 +325,7 @@ class TestCsvWriter:
         ctx = Environment(
             _transport(output={"spec": "filesystem", "dir": str(tmp_path)})
         )
-        with ctx.csv_writer("empty.csv", ["a", "b"]) as w:
+        with ctx.csv_writer("empty.csv", ["a", "b"]) as _w:
             pass
         content = (tmp_path / "empty.csv").read_text()
         assert content.strip() == "a,b"
