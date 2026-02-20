@@ -91,6 +91,39 @@ def _resolve_config_path(raw: str) -> Path:
     return path
 
 
+def _discover_configs() -> list[Path]:
+    """Find mrp.toml and *.mrp.toml files in the current directory."""
+    cwd = Path.cwd()
+    configs: list[Path] = []
+    exact = cwd / "mrp.toml"
+    if exact.exists():
+        configs.append(exact)
+    for p in sorted(cwd.glob("*.mrp.toml")):
+        if p not in configs:
+            configs.append(p)
+    return configs
+
+
+def _pick_config(configs: list[Path]) -> Path:
+    """Interactively ask the user to pick a config file."""
+    print("Multiple config files found:", file=sys.stderr)
+    for i, p in enumerate(configs, 1):
+        print(f"  {i}) {p.name}", file=sys.stderr)
+    while True:
+        try:
+            choice = input(f"Which config to run? [1-{len(configs)}] ")
+        except (EOFError, KeyboardInterrupt):
+            print(file=sys.stderr)
+            sys.exit(1)
+        try:
+            idx = int(choice)
+            if 1 <= idx <= len(configs):
+                return configs[idx - 1]
+        except ValueError:
+            pass
+        print(f"Please enter a number between 1 and {len(configs)}", file=sys.stderr)
+
+
 _SUBCOMMANDS = {"run"}
 
 
@@ -100,15 +133,27 @@ def main(
 ) -> int:
     # Default command: treat bare `mrp <config> ...` as `mrp run <config> ...`
     effective = argv if argv is not None else sys.argv[1:]
-    if effective and effective[0] not in _SUBCOMMANDS and not effective[0].startswith("-"):
+    if (
+        effective
+        and effective[0] not in _SUBCOMMANDS
+        and not effective[0].startswith("-")
+    ):
         effective = ["run", *effective]
+    # Bare `mrp` with no args → `mrp run` (triggers config discovery)
+    if not effective:
+        effective = ["run"]
 
     parser = argparse.ArgumentParser(prog="mrp", description="Model Run Protocol CLI")
     sub = parser.add_subparsers(dest="command")
 
     run_parser = sub.add_parser("run", help="Run a model from a TOML config")
     run_parser.add_argument(
-        "config", type=_resolve_config_path, help="Config file or name ([name].mrp.toml)"
+        "config",
+        nargs="?",
+        type=_resolve_config_path,
+        default=None,
+        help="Config file or name ([name].mrp.toml). "
+        "If omitted, discovers mrp.toml / *.mrp.toml in cwd.",
     )
     run_parser.add_argument(
         "--set",
@@ -206,6 +251,20 @@ def _log_inputs(
 
 
 def _run(args: argparse.Namespace, orch: Orchestrator) -> int:
+    if args.config is None:
+        configs = _discover_configs()
+        if not configs:
+            print(
+                "No config file found. Provide a path or add "
+                "mrp.toml / *.mrp.toml to the current directory.",
+                file=sys.stderr,
+            )
+            return 1
+        if len(configs) == 1:
+            args.config = configs[0]
+        else:
+            args.config = _pick_config(configs)
+
     profiles = args.profile or {}
     runtime_profile = profiles.get("runtime")
 
