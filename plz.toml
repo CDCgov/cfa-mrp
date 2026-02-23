@@ -33,18 +33,17 @@ run = "rumdl fmt ."
 env = "uv"
 
 # Run Python tests
-[tasks.test]
+[tasks.test_py]
 run = "pytest"
 env = "uv"
 
 # Run Rust tests
 [tasks.test_rust]
 run = "cargo test"
-dir = "examples/renewal-rs"
 
 # Run all tests
-[tasks.test_all]
-run_serial = ["plz:test", "plz:test_rust"]
+[tasks.test]
+run_serial = ["plz:test_py", "plz:test_rust"]
 
 # Run renewal model (Python)
 [tasks.run_renewal]

@@ -1,10 +1,7 @@
 use rand::{SeedableRng, distr::Distribution, rngs::StdRng};
 use rand_distr::{Binomial, Poisson};
 
-use crate::{
-    output::RenewalOutput,
-    parameters::{Parameters, Population},
-};
+use crate::{output::RenewalOutput, parameters::Parameters};
 
 pub struct RenewalModel {}
 
@@ -31,7 +28,7 @@ impl RenewalModel {
                 let transmission_rate = rt[step] * current_infectious;
 
                 match parameters.population {
-                    Population::Finite(population) => {
+                    Some(population) => {
                         let susceptible = population - cum_infected;
                         infections = if susceptible > 0 {
                             Binomial::new(
@@ -44,7 +41,7 @@ impl RenewalModel {
                             0
                         };
                     }
-                    Population::Infinite => {
+                    None => {
                         infections = if transmission_rate > 0. {
                             // Poisson requires non-zero rate
                             Poisson::new(transmission_rate).unwrap().sample(&mut rng) as u64
@@ -57,7 +54,7 @@ impl RenewalModel {
             output.infection_incidence[step] = infections;
             cum_infected += infections;
             // Update rt if needed
-            if let Population::Finite(population) = parameters.population
+            if let Some(population) = parameters.population
                 && step < parameters.sim_length - 1
             {
                 rt[step + 1] =
@@ -88,16 +85,13 @@ impl RenewalModel {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        parameters::{Parameters, Population},
-        renewal::RenewalModel,
-    };
+    use crate::{parameters::Parameters, renewal::RenewalModel};
 
     #[test]
     fn test_final_size() {
         let population = 100_000;
         let parameters = Parameters {
-            population: Population::Finite(population),
+            population: Some(population),
             r0: 2.0,
             generation_interval_pmf: vec![0., 0., 0.25, 0.5, 0.25],
             symptom_onset_pmf: vec![1.],
@@ -122,7 +116,7 @@ mod test {
         let mut total = 0;
         for seed in 0..n_samples {
             let parameters = Parameters {
-                population: Population::Infinite,
+                population: None,
                 r0: 1.,
                 generation_interval_pmf: generation_interval_pmf.clone(),
                 symptom_onset_pmf: vec![1.],
@@ -151,7 +145,7 @@ mod test {
         let initial_infections = 1000000;
         let symptom_onset_pmf = vec![0., 0., 0.25, 0.5, 0.25];
         let parameters = Parameters {
-            population: Population::Infinite,
+            population: None,
             r0: 0.,
             generation_interval_pmf: vec![1.],
             symptom_onset_pmf: symptom_onset_pmf.clone(),

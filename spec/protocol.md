@@ -86,7 +86,7 @@ but should not depend on it.
 | Field        | Type   | Required | Description                                                                                                                                                                                                 |
 | ------------ | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `version`    | string | yes      | Semantic version of the MRP spec (e.g. `"0.0.1"`).                                                                                                                                                          |
-| `input_hash` | string | yes      | SHA-256 hash (truncated to 16 hex chars) of the canonical JSON transport (excluding `mrp`). Deterministic: identical inputs produce the same hash. Used for deduplication, caching, and output correlation. |
+| `input_hash` | string | no      | SHA-256 hash (truncated to 16 hex chars) of the canonical JSON transport (excluding `mrp`). Deterministic: identical inputs produce the same hash. Used for deduplication, caching, and output correlation. |
 
 ### `runtime` Section
 
@@ -97,7 +97,7 @@ the section (no `params` wrapper).
 | Field     | Type   | Required | Description                                                                                                        |
 | --------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------ |
 | `spec`    | string | no       | Runtime adapter spec. One of `"process"`, `"wasm"`, `"inline"`, or a custom adapter name. Defaults to `"process"`. |
-| `timeout` | number | no       | Maximum execution time in seconds (process runtime).                                                               |
+| `timeout_s` | number | no       | Maximum execution time in seconds (process runtime).                                                               |
 
 The `command` and `args` fields are consumed by the
 orchestrator and stripped from the transport
@@ -143,7 +143,7 @@ section (no `params` wrapper).
 | -------- | ------ | -------- | --------------------------------------------------------------------------------------- |
 | `spec`   | string | yes      | Output sink spec. One of `"filesystem"`, `"stdout"`, `"buffer"`, or a custom sink name. |
 | `dir`    | string | no       | Directory path for output files (filesystem sink).                                      |
-| `format` | string | no       | Output format: `"csv"`, `"parquet"`, `"jsonl"`, `"bytes"`.                              |
+| `format` | string | no       | Output format e.g., `"csv"`, `"parquet"`, `"jsonl"`, `"bytes"`.                              |
 
 Output supports profiles via `output.profile.*` for named
 variants (e.g., `default` vs `stdout`).

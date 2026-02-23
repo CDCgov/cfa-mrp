@@ -132,13 +132,14 @@ impl<I> Environment<I> {
         let output = &self.output;
         // Flat output
         if output.get("spec").and_then(|v| v.as_str()) == Some("filesystem") {
-            return output.get("dir").and_then(|v| v.as_str()).map(PathBuf::from);
+            return output
+                .get("dir")
+                .and_then(|v| v.as_str())
+                .map(PathBuf::from);
         }
         // Profiled output
         if let Some(profiles) = output.get("profile").and_then(|v| v.as_object()) {
-            let selected = profiles
-                .get("default")
-                .or_else(|| profiles.values().next());
+            let selected = profiles.get("default").or_else(|| profiles.values().next());
             if let Some(prof) = selected {
                 if prof.get("spec").and_then(|v| v.as_str()) == Some("filesystem") {
                     return prof.get("dir").and_then(|v| v.as_str()).map(PathBuf::from);
@@ -155,7 +156,9 @@ impl<I> Environment<I> {
             fs::write(dir.join(filename), data).expect("failed to write file");
         } else {
             use std::io::Write;
-            io::stdout().write_all(data).expect("failed to write to stdout");
+            io::stdout()
+                .write_all(data)
+                .expect("failed to write to stdout");
         }
     }
 
@@ -221,7 +224,10 @@ impl Default for Environment<()> {
 }
 
 fn extract_common(data: &Value) -> (u64, u64, HashMap<String, PathBuf>, Value, Value) {
-    let input_section = data.get("input").cloned().unwrap_or(Value::Object(Default::default()));
+    let input_section = data
+        .get("input")
+        .cloned()
+        .unwrap_or(Value::Object(Default::default()));
 
     let mut input_map = match input_section {
         Value::Object(m) => m,
@@ -284,14 +290,15 @@ pub fn toml_to_json(val: toml::Value) -> Value {
     match val {
         toml::Value::String(s) => Value::String(s),
         toml::Value::Integer(i) => Value::Number(serde_json::Number::from(i)),
-        toml::Value::Float(f) => {
-            serde_json::Number::from_f64(f).map_or(Value::Null, Value::Number)
-        }
+        toml::Value::Float(f) => serde_json::Number::from_f64(f).map_or(Value::Null, Value::Number),
         toml::Value::Boolean(b) => Value::Bool(b),
         toml::Value::Datetime(d) => Value::String(d.to_string()),
         toml::Value::Array(arr) => Value::Array(arr.into_iter().map(toml_to_json).collect()),
         toml::Value::Table(table) => {
-            let map = table.into_iter().map(|(k, v)| (k, toml_to_json(v))).collect();
+            let map = table
+                .into_iter()
+                .map(|(k, v)| (k, toml_to_json(v)))
+                .collect();
             Value::Object(map)
         }
     }
@@ -320,7 +327,10 @@ mod tests {
         let env = Environment::from_json(data);
         assert_eq!(env.seed, 42);
         assert_eq!(env.replicate, 3);
-        assert_eq!(env.files.get("data").unwrap(), &PathBuf::from("/tmp/data.csv"));
+        assert_eq!(
+            env.files.get("data").unwrap(),
+            &PathBuf::from("/tmp/data.csv")
+        );
         assert_eq!(env.output_dir(), Some(PathBuf::from("/tmp/out")));
     }
 

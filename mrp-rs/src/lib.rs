@@ -2,6 +2,7 @@ pub mod api;
 pub mod config;
 pub mod csv;
 pub mod environment;
+pub mod manifest;
 pub mod orchestrator;
 pub mod runtime;
 pub mod stager;
@@ -10,6 +11,7 @@ pub use api::{run, run_with_options};
 pub use csv::CsvWriter;
 pub use environment::Environment;
 pub use orchestrator::{ConfigSource, DefaultOrchestrator, Orchestrator};
+pub use manifest::{ModelSection, MrpMeta, MrpOutput, RunManifest, RuntimeSpec};
 pub use runtime::{RunResult, Runtime, SubprocessRuntime};
 
 #[derive(Debug)]

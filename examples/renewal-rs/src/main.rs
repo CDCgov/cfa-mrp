@@ -2,17 +2,16 @@ pub mod output;
 pub mod parameters;
 pub mod renewal;
 
-use parameters::{Input, Parameters};
+use parameters::Parameters;
 use renewal::RenewalModel;
 
 fn main() {
-    let ctx = cfa_mrp::Environment::<Input>::from_stdin_typed();
-    let input = ctx.input.as_ref().expect("missing input");
-    let parameters = Parameters::new(input, ctx.seed);
+    let ctx = cfa_mrp::Environment::<Parameters>::from_stdin_typed();
+    let params = ctx.input.as_ref().expect("missing input");
 
-    let result = RenewalModel::simulate(&parameters);
+    let result = RenewalModel::simulate(&params);
 
-    let rows: Vec<Vec<String>> = (0..parameters.sim_length)
+    let rows: Vec<Vec<String>> = (0..params.sim_length)
         .map(|i| {
             vec![
                 i.to_string(),
