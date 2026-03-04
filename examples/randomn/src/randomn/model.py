@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 
+from numpy.random import SeedSequence, default_rng
+
 from mrp import MRPModel
 
 
 @dataclass
 class Parameters:
     n: int
+    seed: int = 0
 
 
 class Model(MRPModel):
@@ -15,7 +18,8 @@ class Model(MRPModel):
 
     def run(self):
         n = self.parameters.n
-        values = self.rng.random(n).tolist()
+        rng = default_rng(SeedSequence(self.parameters.seed))
+        values = rng.random(n).tolist()
         self.write_csv(
             "output.csv",
             {"step": list(range(len(values))), "value": values},

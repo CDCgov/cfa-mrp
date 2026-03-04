@@ -10,4 +10,5 @@ class Parameters:
     symptom_onset_pmf: list[float]
     initial_infections: list[int]
     sim_length: int
+    seed: int = 0
     population_size: int | None = None

@@ -4,8 +4,6 @@ import io
 import json
 from pathlib import Path
 
-import numpy as np
-
 from mrp import Environment
 
 
@@ -29,28 +27,27 @@ class TestInit:
         ctx = Environment(_transport(input={"r0": 2.5, "gamma": 0.1}))
         assert ctx.input == {"r0": 2.5, "gamma": 0.1}
 
-    def test_pops_seed_and_replicate(self):
+    def test_pops_replicate(self):
         ctx = Environment(_transport(input={"r0": 2.5, "seed": 42, "replicate": 3}))
-        assert ctx.seed == 42
         assert ctx.replicate == 3
-        assert "seed" not in ctx.input
         assert "replicate" not in ctx.input
-        assert ctx.input == {"r0": 2.5}
+        assert ctx.input == {"r0": 2.5, "seed": 42}
 
-    def test_defaults_seed_and_replicate_to_zero(self):
+    def test_seed_passes_through(self):
+        ctx = Environment(_transport(input={"seed": 42, "r0": 2.5}))
+        assert ctx.input["seed"] == 42
+
+    def test_defaults_replicate_to_zero(self):
         ctx = Environment(_transport(input={"r0": 2.5}))
-        assert ctx.seed == 0
         assert ctx.replicate == 0
 
-    def test_coerces_seed_and_replicate_to_int(self):
-        ctx = Environment(_transport(input={"seed": "7", "replicate": "2"}))
-        assert ctx.seed == 7
+    def test_coerces_replicate_to_int(self):
+        ctx = Environment(_transport(input={"replicate": "2"}))
         assert ctx.replicate == 2
 
     def test_empty_data(self):
         ctx = Environment({})
         assert ctx.input == {}
-        assert ctx.seed == 0
         assert ctx.replicate == 0
         assert ctx.files == {}
         assert ctx.output_dir is None
@@ -70,29 +67,6 @@ class TestInit:
         ctx = Environment(_transport(input=original))
         ctx.input["r0"] = 999
         assert original["r0"] == 2.5
-
-
-# --- rng ---
-
-
-class TestRng:
-    def test_returns_numpy_generator(self):
-        ctx = Environment(_transport(input={"seed": 42}))
-        assert isinstance(ctx.rng, np.random.Generator)
-
-    def test_deterministic(self):
-        ctx1 = Environment(_transport(input={"seed": 42}))
-        ctx2 = Environment(_transport(input={"seed": 42}))
-        assert ctx1.rng.random() == ctx2.rng.random()
-
-    def test_different_seeds_differ(self):
-        ctx1 = Environment(_transport(input={"seed": 1}))
-        ctx2 = Environment(_transport(input={"seed": 2}))
-        assert ctx1.rng.random() != ctx2.rng.random()
-
-    def test_cached(self):
-        ctx = Environment(_transport(input={"seed": 42}))
-        assert ctx.rng is ctx.rng
 
 
 # --- output_dir ---
@@ -155,8 +129,7 @@ class TestLoadStdin:
         data = _transport(input={"r0": 3.0, "seed": 7})
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(data)))
         ctx = Environment().load()
-        assert ctx.input == {"r0": 3.0}
-        assert ctx.seed == 7
+        assert ctx.input == {"r0": 3.0, "seed": 7}
 
     def test_skips_stdin_when_disabled(self, monkeypatch):
         monkeypatch.setattr(
@@ -181,20 +154,17 @@ class TestFromStdin:
         data = _transport(input={"r0": 3.0, "seed": 10})
         monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(data)))
         ctx = Environment.from_args("stdin")
-        assert ctx.input == {"r0": 3.0}
-        assert ctx.seed == 10
+        assert ctx.input == {"r0": 3.0, "seed": 10}
 
     def test_empty_stdin_returns_empty(self, monkeypatch):
         monkeypatch.setattr("sys.stdin", io.StringIO(""))
         ctx = Environment.from_args("stdin")
         assert ctx.input == {}
-        assert ctx.seed == 0
 
     def test_whitespace_stdin_returns_empty(self, monkeypatch):
         monkeypatch.setattr("sys.stdin", io.StringIO("   \n  "))
         ctx = Environment.from_args("stdin")
         assert ctx.input == {}
-        assert ctx.seed == 0
 
 
 # --- from_run_json ---
@@ -204,8 +174,7 @@ class TestFromRunJson:
     def test_constructs_from_dict(self):
         data = _transport(input={"r0": 3.0, "seed": 10})
         ctx = Environment.from_args(data)
-        assert ctx.input == {"r0": 3.0}
-        assert ctx.seed == 10
+        assert ctx.input == {"r0": 3.0, "seed": 10}
 
 
 # --- write ---

@@ -9,8 +9,6 @@ import sys
 import tomllib
 from pathlib import Path
 
-from numpy.random import Generator, SeedSequence, default_rng
-
 
 def _read_file(path: Path) -> dict:
     if path.suffix == ".toml":
@@ -83,20 +81,11 @@ class Environment:
     def __init__(self, data: dict | None = None):
         data = data or {}
         self.input = dict(data.get("input", {}))
-        self.seed = int(self.input.pop("seed", 0))
         self.replicate = int(self.input.pop("replicate", 0))
         model = data.get("model", {})
         self.files = {k: Path(v) for k, v in model.get("files", {}).items()}
         self._output = data.get("output", {})
-        self._rng: Generator | None = None
         self._csv_writers: dict[str, CsvWriter] = {}
-
-    @property
-    def rng(self) -> Generator:
-        """Numpy random Generator seeded via SeedSequence."""
-        if self._rng is None:
-            self._rng = default_rng(SeedSequence(self.seed))
-        return self._rng
 
     def load(
         self,

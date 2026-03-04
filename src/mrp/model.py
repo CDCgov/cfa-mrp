@@ -5,8 +5,6 @@ from __future__ import annotations
 import abc
 from pathlib import Path
 
-from numpy.random import Generator
-
 from mrp.environment import CsvWriter, Environment
 
 
@@ -30,10 +28,6 @@ class MRPModel(abc.ABC):
     @property
     def input(self) -> dict:
         return self.env.input
-
-    @property
-    def rng(self) -> Generator:
-        return self.env.rng
 
     @property
     def files(self) -> dict[str, Path]:

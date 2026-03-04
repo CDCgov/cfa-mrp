@@ -1,3 +1,5 @@
+from numpy.random import Generator, SeedSequence, default_rng
+
 from mrp import MRPModel
 
 from .parameters import Parameters
@@ -15,6 +17,7 @@ class Model(MRPModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.parameters = Parameters(**self.input)
+        self.rng: Generator = default_rng(SeedSequence(self.parameters.seed))
 
     def simulate(self) -> tuple[dict[str, list], dict[str, list]]:
         """Run the simulation and return infection and symptom onset time series.

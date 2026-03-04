@@ -10,7 +10,6 @@ use crate::csv::CsvWriter;
 
 pub struct Environment<I = ()> {
     pub input: Option<I>,
-    pub seed: u64,
     pub replicate: u64,
     pub files: HashMap<String, PathBuf>,
     input_json: Value,
@@ -23,7 +22,6 @@ impl Environment<()> {
     pub fn new() -> Self {
         Environment {
             input: None,
-            seed: 0,
             replicate: 0,
             files: HashMap::new(),
             input_json: Value::Null,
@@ -50,10 +48,9 @@ impl Environment<()> {
     }
 
     fn build(data: Value) -> Self {
-        let (seed, replicate, files, input_json, output) = extract_common(&data);
+        let (replicate, files, input_json, output) = extract_common(&data);
         Environment {
             input: None,
-            seed,
             replicate,
             files,
             input_json,
@@ -82,7 +79,7 @@ impl<I: DeserializeOwned> Environment<I> {
     }
 
     fn build_typed(data: Value) -> Self {
-        let (seed, replicate, files, input_json, output) = extract_common(&data);
+        let (replicate, files, input_json, output) = extract_common(&data);
         let input = if input_json.is_null() || input_json.as_object().is_some_and(|m| m.is_empty())
         {
             None
@@ -91,7 +88,6 @@ impl<I: DeserializeOwned> Environment<I> {
         };
         Environment {
             input,
-            seed,
             replicate,
             files,
             input_json,
@@ -116,7 +112,6 @@ impl Environment<()> {
         };
         Environment {
             input,
-            seed: self.seed,
             replicate: self.replicate,
             files: self.files,
             input_json: self.input_json,
@@ -223,7 +218,7 @@ impl Default for Environment<()> {
     }
 }
 
-fn extract_common(data: &Value) -> (u64, u64, HashMap<String, PathBuf>, Value, Value) {
+fn extract_common(data: &Value) -> (u64, HashMap<String, PathBuf>, Value, Value) {
     let input_section = data
         .get("input")
         .cloned()
@@ -234,10 +229,6 @@ fn extract_common(data: &Value) -> (u64, u64, HashMap<String, PathBuf>, Value, V
         _ => Default::default(),
     };
 
-    let seed = input_map
-        .remove("seed")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0);
     let replicate = input_map
         .remove("replicate")
         .and_then(|v| v.as_u64())
@@ -261,7 +252,7 @@ fn extract_common(data: &Value) -> (u64, u64, HashMap<String, PathBuf>, Value, V
         .cloned()
         .unwrap_or(Value::Object(Default::default()));
 
-    (seed, replicate, files, input_json, output)
+    (replicate, files, input_json, output)
 }
 
 fn read_stdin() -> Value {
@@ -311,7 +302,6 @@ mod tests {
     #[test]
     fn test_from_json_empty() {
         let env = Environment::from_json(Value::Object(Default::default()));
-        assert_eq!(env.seed, 0);
         assert_eq!(env.replicate, 0);
         assert!(env.files.is_empty());
         assert!(env.output_dir().is_none());
@@ -325,7 +315,6 @@ mod tests {
             "model": { "files": { "data": "/tmp/data.csv" } }
         });
         let env = Environment::from_json(data);
-        assert_eq!(env.seed, 42);
         assert_eq!(env.replicate, 3);
         assert_eq!(
             env.files.get("data").unwrap(),
@@ -339,13 +328,14 @@ mod tests {
         #[derive(serde::Deserialize, Debug)]
         struct MyInput {
             r0: f64,
+            seed: u64,
         }
         let data = serde_json::json!({
             "input": { "seed": 1, "r0": 2.5 }
         });
         let env = Environment::<MyInput>::from_json_typed(data);
-        assert_eq!(env.seed, 1);
         let input = env.input.unwrap();
+        assert_eq!(input.seed, 1);
         assert!((input.r0 - 2.5).abs() < f64::EPSILON);
     }
 
@@ -354,14 +344,14 @@ mod tests {
         #[derive(serde::Deserialize, Debug)]
         struct MyInput {
             r0: f64,
+            seed: u64,
         }
         let data = serde_json::json!({
             "input": { "seed": 5, "r0": 1.5 }
         });
         let env = Environment::from_json(data);
-        assert_eq!(env.seed, 5);
         let typed: Environment<MyInput> = env.with_input_type();
-        assert_eq!(typed.seed, 5);
+        assert_eq!(typed.input.as_ref().unwrap().seed, 5);
         assert!((typed.input.unwrap().r0 - 1.5).abs() < f64::EPSILON);
     }
 
