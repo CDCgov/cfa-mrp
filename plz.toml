@@ -54,3 +54,6 @@ env = "uv"
 [tasks.run_renewal_rust]
 run = "mrp run examples/renewal.mrp.toml --profile runtime=rust"
 env = "uv"
+
+[tasks.tag]
+run = "git tag -a v{version} -m 'Release version {version}'"
