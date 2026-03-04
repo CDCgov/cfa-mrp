@@ -26,4 +26,4 @@ jobs:
         run: plz check
 
       - name: Test
-        run: plz test_all
+        run: plz test

@@ -50,10 +50,12 @@ run_serial = ["plz:test_py", "plz:test_rust"]
 run = "mrp run examples/renewal.mrp.toml"
 env = "uv"
 
+# Tag a release
+[tasks.tag]
+run = "python scripts/tag.py"
+env = "uv"
+
 # Run renewal model (Rust)
 [tasks.run_renewal_rust]
 run = "mrp run examples/renewal.mrp.toml --profile runtime=rust"
 env = "uv"
-
-[tasks.tag]
-run = "git tag -a v{version} -m 'Release version {version}'"
